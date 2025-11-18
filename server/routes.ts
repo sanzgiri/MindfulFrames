@@ -78,6 +78,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activities routes
+  app.get('/api/activities', isAuthenticated, async (req, res) => {
+    try {
+      const pauses = await storage.getAllPauses();
+      const allActivities = [];
+      for (const pause of pauses) {
+        const activities = await storage.getActivitiesByPause(pause.id);
+        allActivities.push(...activities);
+      }
+      res.json(allActivities);
+    } catch (error) {
+      console.error("Error fetching all activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
   app.get('/api/pauses/:pauseId/activities', isAuthenticated, async (req, res) => {
     try {
       const pauseId = parseInt(req.params.pauseId);

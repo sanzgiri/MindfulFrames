@@ -78,24 +78,9 @@ export default function Home() {
   });
 
   const { data: allActivities = [], isLoading: activitiesLoading } = useQuery<any[]>({
-    queryKey: ["/api/pauses/1/activities"],
-    enabled: pauses.length > 0 && isAuthenticated,
+    queryKey: ["/api/activities"],
+    enabled: isAuthenticated,
     retry: false,
-    queryFn: async () => {
-      const activities = [];
-      for (const pause of pauses) {
-        const response = await fetch(`/api/pauses/${pause.id}/activities`, { credentials: "include" });
-        if (response.status === 401) {
-          window.location.href = "/api/login";
-          return [];
-        }
-        if (response.ok) {
-          const pauseActivities = await response.json();
-          activities.push(...pauseActivities);
-        }
-      }
-      return activities;
-    },
   });
 
   const { data: photos = [] } = useQuery<any[]>({
@@ -140,7 +125,7 @@ export default function Home() {
     { label: 'Days Active', value: daysActive, icon: 'calendar' as const },
   ];
 
-  const displayPauses = pauses.slice(0, 4).map(pause => {
+  const displayPauses = pauses.map(pause => {
     const pauseActivityIds = pauseActivityMap.get(pause.id) || [];
     const completed = getCompletedCount(pauseActivityIds);
     const total = pauseActivityIds.length || 1;
