@@ -22,10 +22,15 @@ export default function PauseCard({
   imageUrl,
   onClick 
 }: PauseCardProps) {
+  const handleClick = () => {
+    console.log(`PauseCard ${pauseNumber} clicked!`);
+    onClick();
+  };
+
   return (
     <Card 
-      className="cursor-pointer overflow-visible"
-      onClick={onClick}
+      className="cursor-pointer overflow-visible transition-all hover:scale-[1.02]"
+      onClick={handleClick}
       data-testid={`card-pause-${pauseNumber}`}
     >
       {imageUrl && (
