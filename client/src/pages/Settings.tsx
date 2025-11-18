@@ -5,15 +5,53 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
-  const [location, setLocation] = useState<'portland' | 'murrayhill'>('portland');
+  const { user, updateSettings } = useAuth();
+  const { toast } = useToast();
+  const [location, setLocation] = useState<'portland' | 'murrayhill'>(
+    (user?.locationPreference as 'portland' | 'murrayhill') || 'portland'
+  );
   const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
-    console.log('Dark mode:', !darkMode);
+  };
+
+  const handleDateSelect = async (date: Date) => {
+    try {
+      await updateSettings({ startDate: date.toISOString() });
+      toast({
+        title: "Start date updated",
+        description: "Your journey start date has been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update start date. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLocationChange = async (newLocation: 'portland' | 'murrayhill') => {
+    setLocation(newLocation);
+    try {
+      await updateSettings({ locationPreference: newLocation });
+      toast({
+        title: "Location updated",
+        description: `Your location preference has been set to ${newLocation === 'portland' ? 'Portland' : 'Murrayhill/Beaverton'}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update location. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -31,15 +69,12 @@ export default function Settings() {
 
         <div className="space-y-6">
           <StartDatePicker
-            onDateSelect={(date) => console.log('Start date selected:', date)}
+            onDateSelect={handleDateSelect}
           />
 
           <LocationToggle
             selectedLocation={location}
-            onLocationChange={(loc) => {
-              setLocation(loc);
-              console.log('Location changed to:', loc);
-            }}
+            onLocationChange={handleLocationChange}
           />
 
           <Card>

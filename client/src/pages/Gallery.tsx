@@ -1,22 +1,39 @@
 import PhotoGallery from "@/components/PhotoGallery";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Camera } from "lucide-react";
+import { usePhotos } from "@/hooks/use-photos";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { Pause } from "@shared/schema";
 
 export default function Gallery() {
-  //todo: remove mock functionality - replace with real data
-  const mockPhotos = [
-    { id: '1', url: '/api/placeholder/400/400', caption: 'Morning light through window', date: 'Oct 25, 2025', pauseNumber: 1 },
-    { id: '2', url: '/api/placeholder/400/400', caption: 'First sight project - coffee cup', date: 'Oct 26, 2025', pauseNumber: 1 },
-    { id: '3', url: '/api/placeholder/400/400', caption: 'Raindrops on glass', date: 'Oct 27, 2025', pauseNumber: 1 },
-    { id: '4', url: '/api/placeholder/400/400', caption: 'Forest Park mist', date: 'Oct 28, 2025', pauseNumber: 1 },
-    { id: '5', url: '/api/placeholder/400/400', caption: 'Light through clouds', date: 'Nov 2, 2025', pauseNumber: 2 },
-    { id: '6', url: '/api/placeholder/400/400', caption: 'Willamette at golden hour', date: 'Nov 3, 2025', pauseNumber: 2 },
-    { id: '7', url: '/api/placeholder/400/400', date: 'Nov 4, 2025', pauseNumber: 2 },
-    { id: '8', url: '/api/placeholder/400/400', caption: 'Burnside Bridge reflections', date: 'Nov 5, 2025', pauseNumber: 2 },
-  ];
+  const { photos, isLoading } = usePhotos();
+  const { data: pauses = [] } = useQuery<Pause[]>({
+    queryKey: ["/api/pauses"],
+  });
 
-  const pause1Photos = mockPhotos.filter(p => p.pauseNumber === 1);
-  const pause2Photos = mockPhotos.filter(p => p.pauseNumber === 2);
+  const formattedPhotos = useMemo(() => {
+    return photos.map(photo => ({
+      id: String(photo.id),
+      url: photo.objectPath,
+      caption: photo.caption || undefined,
+      date: new Date(photo.createdAt!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      pauseNumber: photo.pauseId,
+    }));
+  }, [photos]);
+
+  const uniquePauseNumbers = Array.from(new Set(formattedPhotos.map(p => p.pauseNumber))).sort();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your photos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,34 +48,55 @@ export default function Gallery() {
           </p>
         </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="all" data-testid="tab-all-photos">All Photos</TabsTrigger>
-            <TabsTrigger value="pause1" data-testid="tab-pause1-photos">Pause 1</TabsTrigger>
-            <TabsTrigger value="pause2" data-testid="tab-pause2-photos">Pause 2</TabsTrigger>
-          </TabsList>
+        {formattedPhotos.length === 0 ? (
+          <div className="text-center py-16">
+            <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No photos yet</h3>
+            <p className="text-muted-foreground">
+              Start uploading photos as you work through your pauses
+            </p>
+          </div>
+        ) : (
+          <Tabs defaultValue="all" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="all" data-testid="tab-all-photos">
+                All Photos ({formattedPhotos.length})
+              </TabsTrigger>
+              {uniquePauseNumbers.map(pauseNum => {
+                const pausePhotos = formattedPhotos.filter(p => p.pauseNumber === pauseNum);
+                const pause = pauses.find(p => p.id === pauseNum);
+                return (
+                  <TabsTrigger 
+                    key={pauseNum} 
+                    value={`pause${pauseNum}`}
+                    data-testid={`tab-pause${pauseNum}-photos`}
+                  >
+                    {pause?.title || `Pause ${pauseNum}`} ({pausePhotos.length})
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
 
-          <TabsContent value="all">
-            <PhotoGallery
-              photos={mockPhotos}
-              onPhotoClick={(photo) => console.log('Photo clicked:', photo)}
-            />
-          </TabsContent>
+            <TabsContent value="all">
+              <PhotoGallery
+                photos={formattedPhotos}
+                onPhotoClick={(photo) => console.log('Photo clicked:', photo)}
+              />
+            </TabsContent>
 
-          <TabsContent value="pause1">
-            <PhotoGallery
-              photos={pause1Photos}
-              onPhotoClick={(photo) => console.log('Photo clicked:', photo)}
-            />
-          </TabsContent>
-
-          <TabsContent value="pause2">
-            <PhotoGallery
-              photos={pause2Photos}
-              onPhotoClick={(photo) => console.log('Photo clicked:', photo)}
-            />
-          </TabsContent>
-        </Tabs>
+            {uniquePauseNumbers.map(pauseNum => {
+              const pausePhotos = formattedPhotos.filter(p => p.pauseNumber === pauseNum);
+              return (
+                <TabsContent key={pauseNum} value={`pause${pauseNum}`}>
+                  <PhotoGallery
+                    photos={pausePhotos}
+                    onPhotoClick={(photo) => console.log('Photo clicked:', photo)}
+                  />
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        )}
       </div>
     </div>
   );
