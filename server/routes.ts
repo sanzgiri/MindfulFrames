@@ -48,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pauses routes
-  app.get('/api/pauses', async (req, res) => {
+  app.get('/api/pauses', isAuthenticated, async (req, res) => {
     try {
       const pauses = await storage.getAllPauses();
       res.json(pauses);
@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/pauses/:id', async (req, res) => {
+  app.get('/api/pauses/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const pause = await storage.getPause(id);
@@ -78,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activities routes
-  app.get('/api/pauses/:pauseId/activities', async (req, res) => {
+  app.get('/api/pauses/:pauseId/activities', isAuthenticated, async (req, res) => {
     try {
       const pauseId = parseInt(req.params.pauseId);
       const activities = await storage.getActivitiesByPause(pauseId);
@@ -203,6 +203,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
+      
+      const photos = await storage.getUserPhotos(userId);
+      const photo = photos.find(p => p.id === id);
+      
+      if (!photo) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+      
+      try {
+        const objectStorageService = new ObjectStorageService();
+        const objectFile = await objectStorageService.getObjectEntityFile(photo.objectPath);
+        await objectFile.delete();
+      } catch (error) {
+        console.error("Error deleting object from storage:", error);
+      }
       
       await storage.deletePhoto(id, userId);
       res.json({ message: "Photo deleted successfully" });

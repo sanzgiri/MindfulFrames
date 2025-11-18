@@ -1,60 +1,143 @@
-import HeroSection from "@/components/HeroSection";
 import PauseCard from "@/components/PauseCard";
 import DashboardStats from "@/components/DashboardStats";
 import ProgressRing from "@/components/ProgressRing";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import forestDawn from '@assets/generated_images/Forest_Park_misty_dawn_07796f10.png';
-import rainDroplets from '@assets/generated_images/Rain_droplets_window_reflection_ff4bc57a.png';
-import willamette from '@assets/generated_images/Willamette_River_golden_hour_7e552f50.png';
 import autumnLeaves from '@assets/generated_images/Autumn_leaves_water_droplets_7fbabb58.png';
+import willamette from '@assets/generated_images/Willamette_River_golden_hour_7e552f50.png';
+import rainDroplets from '@assets/generated_images/Rain_droplets_window_reflection_ff4bc57a.png';
 import mossBark from '@assets/generated_images/Moss_covered_bark_texture_5f821545.png';
-import zenGarden from '@assets/generated_images/Zen_garden_stones_water_ca2e4906.png';
+import { useQuery } from "@tanstack/react-query";
+import type { Pause } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { useProgress } from "@/hooks/use-progress";
+import { useLocation } from "wouter";
+
+const pauseImages = [
+  autumnLeaves,
+  willamette,
+  mossBark,
+  rainDroplets,
+  forestDawn,
+  autumnLeaves,
+  willamette,
+  mossBark,
+  rainDroplets,
+  forestDawn,
+];
+
+function getDateRange(startDate: Date, weekNumber: number): string {
+  const weekStart = new Date(startDate);
+  weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  return `${formatDate(weekStart)}-${formatDate(weekEnd)}`;
+}
+
+function getCurrentWeek(startDate: Date): number {
+  const now = new Date();
+  const diffTime = now.getTime() - startDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const weekNumber = Math.floor(diffDays / 7) + 1;
+  return Math.max(1, Math.min(10, weekNumber));
+}
 
 export default function Home() {
-  //todo: remove mock functionality - replace with real data
-  const mockStats = [
-    { label: 'Pauses Complete', value: 2, icon: 'check' as const },
-    { label: 'Photos Uploaded', value: 24, icon: 'camera' as const },
-    { label: 'Journal Entries', value: 8, icon: 'book' as const },
-    { label: 'Days Active', value: 15, icon: 'calendar' as const },
+  const { user } = useAuth();
+  const { progress, getCompletedCount } = useProgress();
+  const [, setLocation] = useLocation();
+
+  const { data: pauses = [], isLoading: pausesLoading } = useQuery<Pause[]>({
+    queryKey: ["/api/pauses"],
+  });
+
+  const { data: allActivities = [], isLoading: activitiesLoading } = useQuery<any[]>({
+    queryKey: ["/api/pauses/1/activities"],
+    enabled: pauses.length > 0,
+    queryFn: async () => {
+      const activities = [];
+      for (const pause of pauses) {
+        const response = await fetch(`/api/pauses/${pause.id}/activities`, { credentials: "include" });
+        if (response.ok) {
+          const pauseActivities = await response.json();
+          activities.push(...pauseActivities);
+        }
+      }
+      return activities;
+    },
+  });
+
+  const { data: photos = [] } = useQuery<any[]>({
+    queryKey: ["/api/photos"],
+  });
+
+  const { data: journalEntries = [] } = useQuery<any[]>({
+    queryKey: ["/api/journal"],
+  });
+
+  const startDate = user?.startDate ? new Date(user.startDate) : new Date();
+  const currentWeek = getCurrentWeek(startDate);
+  const daysActive = Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  const allActivityIds = allActivities.map(a => a.id);
+  const completedActivities = getCompletedCount(allActivityIds);
+  const totalActivities = allActivityIds.length;
+  const overallProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
+
+  const pauseActivityMap = new Map<number, number[]>();
+  allActivities.forEach(activity => {
+    const pauseId = activity.pauseId;
+    if (!pauseActivityMap.has(pauseId)) {
+      pauseActivityMap.set(pauseId, []);
+    }
+    pauseActivityMap.get(pauseId)!.push(activity.id);
+  });
+
+  const completedPauses = pauses.filter(pause => {
+    const pauseActivityIds = pauseActivityMap.get(pause.id) || [];
+    return pauseActivityIds.length > 0 && getCompletedCount(pauseActivityIds) === pauseActivityIds.length;
+  }).length;
+
+  const stats = [
+    { label: 'Pauses Complete', value: completedPauses, icon: 'check' as const },
+    { label: 'Photos Uploaded', value: photos.length, icon: 'camera' as const },
+    { label: 'Journal Entries', value: journalEntries.length, icon: 'book' as const },
+    { label: 'Days Active', value: daysActive, icon: 'calendar' as const },
   ];
 
-  //todo: remove mock functionality - replace with real data
-  const mockPauses = [
-    {
-      pauseNumber: 1,
-      title: "Awakening the Gaze",
-      theme: "Learning to See the Present Moment",
-      dateRange: "Oct 25-31",
-      progress: 100,
-      imageUrl: autumnLeaves,
-    },
-    {
-      pauseNumber: 2,
-      title: "Breathing with Light",
-      theme: "Synchronizing Breath and Vision",
-      dateRange: "Nov 1-7",
-      progress: 65,
-      imageUrl: willamette,
-    },
-    {
-      pauseNumber: 3,
-      title: "The Body as Landscape",
-      theme: "Embodied Awareness",
-      dateRange: "Nov 8-14",
-      progress: 0,
-      imageUrl: mossBark,
-    },
-    {
-      pauseNumber: 4,
-      title: "Textures of Emotion",
-      theme: "Feeling Through Seeing",
-      dateRange: "Nov 15-21",
-      progress: 0,
-      imageUrl: rainDroplets,
-    },
-  ];
+  const displayPauses = pauses.slice(0, 4).map(pause => {
+    const pauseActivityIds = pauseActivityMap.get(pause.id) || [];
+    const completed = getCompletedCount(pauseActivityIds);
+    const total = pauseActivityIds.length || 1;
+    const pauseProgress = Math.round((completed / total) * 100);
+
+    return {
+      pauseNumber: pause.weekNumber,
+      title: pause.title,
+      theme: pause.theme,
+      dateRange: getDateRange(startDate, pause.weekNumber),
+      progress: pauseProgress,
+      imageUrl: pauseImages[pause.id - 1] || forestDawn,
+    };
+  });
+
+  if (pausesLoading || activitiesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your journey...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -76,7 +159,7 @@ export default function Home() {
             Photography & Mindfulness
           </p>
           <p className="text-white/70 text-sm md:text-base mb-8">
-            Day 15 • Pause 2 of 10
+            Day {daysActive} • Pause {currentWeek} of 10
           </p>
         </div>
       </div>
@@ -84,25 +167,21 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 space-y-12">
         <section>
           <div className="flex items-center justify-center mb-8">
-            <ProgressRing progress={20} size={140} label="Overall Progress" />
+            <ProgressRing progress={overallProgress} size={140} label="Overall Progress" />
           </div>
-          <DashboardStats stats={mockStats} />
+          <DashboardStats stats={stats} />
         </section>
 
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold">Your Pauses</h2>
-            <Button variant="ghost" size="sm" data-testid="button-view-all">
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockPauses.map((pause) => (
+            {displayPauses.map((pause) => (
               <PauseCard
                 key={pause.pauseNumber}
                 {...pause}
-                onClick={() => console.log('Navigate to pause', pause.pauseNumber)}
+                onClick={() => setLocation(`/pause/${pause.pauseNumber}`)}
               />
             ))}
           </div>
