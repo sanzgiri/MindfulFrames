@@ -127,6 +127,19 @@ async function seed() {
     },
   ]).onConflictDoNothing();
 
+  await db.insert(photographers).values([
+    {
+      pauseId: 2,
+      name: "Ernst Haas",
+      description: "Pioneer of color photography and master of motion blur. Study his ability to capture the energy of movement.",
+      externalLink: "https://www.ernst-haas.com/",
+      sampleImages: JSON.stringify([
+        "https://www.ernst-haas.com/gallery/motion/",
+        "https://www.ernst-haas.com/gallery/abstractions/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
   // Pause 3: Attention
   await db.insert(pauses).values({
     id: 3,
@@ -182,25 +195,494 @@ async function seed() {
     },
   ]).onConflictDoNothing();
 
-  // Pause 4-10 placeholders (to be filled in with full content later)
-  const remainingPauses = [
-    { id: 4, weekNumber: 4, title: "Space", theme: "Embracing Emptiness" },
-    { id: 5, weekNumber: 5, title: "Color", theme: "Emotional Palette" },
-    { id: 6, weekNumber: 6, title: "Texture", theme: "The Feel of Things" },
-    { id: 7, weekNumber: 7, title: "Perspective", theme: "Shifting Views" },
-    { id: 8, weekNumber: 8, title: "Weather", theme: "Accepting Conditions" },
-    { id: 9, weekNumber: 9, title: "Twilight", theme: "In-Between Moments" },
-    { id: 10, weekNumber: 10, title: "Return", theme: "Coming Home" },
-  ];
+  await db.insert(photographers).values([
+    {
+      pauseId: 3,
+      name: "Edward Weston",
+      description: "Master of close-up studies revealing hidden beauty in everyday objects. Notice his attention to form and detail.",
+      externalLink: "https://www.edwardweston.com/",
+      sampleImages: JSON.stringify([
+        "https://www.edwardweston.com/peppers/",
+        "https://www.edwardweston.com/shells/"
+      ]),
+    },
+  ]).onConflictDoNothing();
 
-  for (const pause of remainingPauses) {
-    await db.insert(pauses).values({
-      ...pause,
-      description: `Week ${pause.weekNumber} of your mindfulness and photography journey.`,
-      spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWZqd5JICZI0u",
-      spotifyDescription: "Curated sounds for your practice",
-    }).onConflictDoNothing();
-  }
+  // Pause 4: Space
+  await db.insert(pauses).values({
+    id: 4,
+    weekNumber: 4,
+    title: "Space",
+    theme: "Embracing Emptiness",
+    description: "Learn to work with negative space and silence. In meditation, we explore the space between thoughts. In photography, we learn that what we leave out is as important as what we include.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX4PP3DA4J0N8",
+    spotifyDescription: "Minimalist ambient soundscapes for contemplative practice",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 4,
+      title: "Open Awareness Meditation",
+      description: "30 minutes of spacious awareness. Allow thoughts to arise and pass like clouds in the sky.",
+      duration: "30 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 4,
+      title: "Weekly Project: Negative Space",
+      description: "Create images where empty space tells as much story as the subject. Explore minimalism.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 4,
+      title: "Micro-Practice: Pause in Silence",
+      description: "Find a quiet spot. Sit in complete silence for five minutes. Notice the quality of spaciousness.",
+      duration: "5 min",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 4,
+      name: "OHSU Sky Bridge",
+      description: "Capture the vast sky and minimal architecture. Perfect for exploring negative space.",
+      address: "3181 SW Sam Jackson Park Rd, Portland, OR 97239",
+      locationType: "portland",
+    },
+    {
+      pauseId: 4,
+      name: "Cooper Mountain Nature Park",
+      description: "Wide open hilltops with expansive sky views. Practice minimalist landscape composition.",
+      address: "18892 SW Kemmer Rd, Beaverton, OR 97007",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 4,
+      name: "Hiroshi Sugimoto",
+      description: "Master of minimalist seascapes and architectural photography. Study his use of negative space and meditation on emptiness.",
+      externalLink: "https://www.sugimotohiroshi.com/",
+      sampleImages: JSON.stringify([
+        "https://www.sugimotohiroshi.com/seascapes/",
+        "https://www.sugimotohiroshi.com/architecture/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 5: Color
+  await db.insert(pauses).values({
+    id: 5,
+    weekNumber: 5,
+    title: "Color",
+    theme: "Emotional Palette",
+    description: "This week, we explore how color affects mood and emotion. Notice the feelings different colors evoke in your meditation practice and photography.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX0MLFaUdXnjA",
+    spotifyDescription: "Vibrant, colorful music to match your exploration",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 5,
+      title: "Loving-Kindness Meditation",
+      description: "25 minutes of metta practice. Notice the warmth and color of compassionate feelings.",
+      duration: "25 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 5,
+      title: "Weekly Project: Color Stories",
+      description: "Choose one color each day. Create a photo series exploring that color's emotional impact.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 5,
+      title: "Micro-Practice: Color Awareness",
+      description: "Walk slowly for 10 minutes. Notice every shade and hue. How do different colors make you feel?",
+      duration: "10 min",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 5,
+      name: "Alberta Arts District",
+      description: "Vibrant street art and colorful murals. Perfect for exploring bold, emotional color.",
+      address: "NE Alberta St, Portland, OR 97211",
+      locationType: "portland",
+    },
+    {
+      pauseId: 5,
+      name: "Progress Ridge TownSquare",
+      description: "Modern architecture with pops of color. Practice finding color in unexpected urban settings.",
+      address: "14865 SW Barrows Rd, Beaverton, OR 97007",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 5,
+      name: "William Eggleston",
+      description: "Pioneer of color photography as art form. Study his ability to find profound beauty in everyday color.",
+      externalLink: "https://egglestontrust.com/",
+      sampleImages: JSON.stringify([
+        "https://egglestontrust.com/los-alamos/",
+        "https://egglestontrust.com/democratic-camera/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 6: Texture
+  await db.insert(pauses).values({
+    id: 6,
+    weekNumber: 6,
+    title: "Texture",
+    theme: "The Feel of Things",
+    description: "Engage your sense of touch through visual means. In meditation, feel the texture of your experience. In photography, learn to convey tactile sensations through images.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DX4dyzvuaRJ0n",
+    spotifyDescription: "Rich, layered textures in sound",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 6,
+      title: "Body Sensation Meditation",
+      description: "30 minutes exploring physical sensations. Notice the texture of each moment's experience.",
+      duration: "30 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 6,
+      title: "Weekly Project: Tactile Photography",
+      description: "Photograph surfaces that convey touch: rough bark, smooth water, soft petals. Make viewers want to reach out.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 6,
+      title: "Micro-Practice: Touch Awareness",
+      description: "Close your eyes. Touch three different surfaces. Really feel their texture before photographing them.",
+      duration: "5 min",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 6,
+      name: "Forest Park Trails",
+      description: "Ancient trees with deeply textured bark. Moss-covered stones. Nature's texture gallery.",
+      address: "NW Forest Park Dr, Portland, OR 97210",
+      locationType: "portland",
+    },
+    {
+      pauseId: 6,
+      name: "Tualatin Valley Highway Historic Buildings",
+      description: "Weathered wood and aged brick. Explore the texture of time and history.",
+      address: "Tualatin Valley Hwy, Beaverton, OR 97006",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 6,
+      name: "Aaron Siskind",
+      description: "Abstract photographer who found beauty in textures and surfaces. Study his transformation of ordinary walls and peeling paint into art.",
+      externalLink: "https://www.aaronsiskind.org/",
+      sampleImages: JSON.stringify([
+        "https://www.aaronsiskind.org/abstractions/",
+        "https://www.aaronsiskind.org/pleasures-and-terrors/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 7: Perspective
+  await db.insert(pauses).values({
+    id: 7,
+    weekNumber: 7,
+    title: "Perspective",
+    theme: "Shifting Views",
+    description: "Halfway through your journey. This week, practice seeing from different angles—both literally and metaphorically. Change your viewpoint and discover new understanding.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWYcDnBA8r0zA",
+    spotifyDescription: "Music that shifts and transforms perspective",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 7,
+      title: "Perspective-Taking Meditation",
+      description: "25 minutes reflecting on different viewpoints. Imagine seeing your life from different perspectives.",
+      duration: "25 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 7,
+      title: "Weekly Project: Unusual Angles",
+      description: "Photograph familiar subjects from completely new angles. Lie down. Climb up. Get very close or very far.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 7,
+      title: "Micro-Practice: Change Your View",
+      description: "Visit a familiar place. View it from a position you've never tried before. Notice what changes.",
+      duration: "10 min",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 7,
+      name: "St. Johns Bridge",
+      description: "Iconic Portland bridge offering dramatic vantage points from above and below. Perfect for perspective play.",
+      address: "St Johns Bridge, Portland, OR 97203",
+      locationType: "portland",
+    },
+    {
+      pauseId: 7,
+      name: "Murrayhill Marketplace Parking Structure",
+      description: "Unexpected angles in everyday architecture. Multiple levels for shifting perspectives.",
+      address: "14900 SW Barrows Rd, Beaverton, OR 97007",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 7,
+      name: "André Kertész",
+      description: "Master of unusual angles and distorted perspectives. Study his playful approach to viewpoint and composition.",
+      externalLink: "https://www.artsy.net/artist/andre-kertesz",
+      sampleImages: JSON.stringify([
+        "https://www.artsy.net/artist/andre-kertesz/works",
+        "https://www.metmuseum.org/art/collection/search#!/search?q=Andre%20Kertesz"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 8: Weather
+  await db.insert(pauses).values({
+    id: 8,
+    weekNumber: 8,
+    title: "Weather",
+    theme: "Accepting Conditions",
+    description: "Learn to work with conditions as they are, not as you wish them to be. Weather in meditation and photography teaches acceptance and adaptation.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWW1zJdhlKITm",
+    spotifyDescription: "Sounds of rain, storms, and natural weather",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 8,
+      title: "Equanimity Meditation",
+      description: "30 minutes cultivating balance with whatever arises. Weather the storms of your mind with calm acceptance.",
+      duration: "30 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 8,
+      title: "Weekly Project: All Weather Photography",
+      description: "Go out in rain, fog, wind, sun. Don't wait for perfect conditions. Find beauty in each weather.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 8,
+      title: "Micro-Practice: Weather Acceptance",
+      description: "Whatever the weather today, spend 5 minutes appreciating it. Find one beautiful thing about these exact conditions.",
+      duration: "5 min",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 8,
+      name: "Washington Park in the Rain",
+      description: "Portland's flagship park transforms in different weather. Embrace the rain.",
+      address: "Washington Park, Portland, OR 97205",
+      locationType: "portland",
+    },
+    {
+      pauseId: 8,
+      name: "Greenway Park During Fog",
+      description: "Morning fog creates ethereal conditions. Practice acceptance of whatever weather you find.",
+      address: "SW Greenway Park, Beaverton, OR 97005",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 8,
+      name: "Galen Rowell",
+      description: "Adventure photographer who excelled in challenging weather conditions. Study his ability to capture dramatic mountain light and storms.",
+      externalLink: "https://www.mountainlight.com/",
+      sampleImages: JSON.stringify([
+        "https://www.mountainlight.com/stock-photography/",
+        "https://www.mountainlight.com/fine-art/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 9: Twilight
+  await db.insert(pauses).values({
+    id: 9,
+    weekNumber: 9,
+    title: "Twilight",
+    theme: "In-Between Moments",
+    description: "As your journey nears completion, explore the liminal spaces—dawn and dusk, sleeping and waking, ending and beginning. Find beauty in transitions.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWSiZVO2J6WeI",
+    spotifyDescription: "Gentle music for dawn and dusk",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 9,
+      title: "Twilight Meditation",
+      description: "Practice at dawn or dusk. 25 minutes sitting with transition, with change, with the in-between.",
+      duration: "25 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 9,
+      title: "Weekly Project: Golden Hour Series",
+      description: "Photograph during the first and last light of day. Capture the magic of transition times.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 9,
+      title: "Micro-Practice: Threshold Awareness",
+      description: "Notice the transitions in your day. Pause at each threshold—doorways, beginnings, endings.",
+      duration: "Throughout the day",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 9,
+      name: "Mt. Tabor at Sunrise",
+      description: "Volcanic cinder cone with 360-degree views of Portland. Perfect for dawn photography.",
+      address: "SE 60th Ave & Salmon St, Portland, OR 97215",
+      locationType: "portland",
+    },
+    {
+      pauseId: 9,
+      name: "Summerlake Park at Sunset",
+      description: "Peaceful lake reflecting the changing light. Ideal for twilight meditation and photography.",
+      address: "10855 SW Summerlake Dr, Tigard, OR 97223",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 9,
+      name: "Michael Kenna",
+      description: "Master of long-exposure twilight photography. Study his meditative approach to photographing between day and night.",
+      externalLink: "https://www.michaelkenna.com/",
+      sampleImages: JSON.stringify([
+        "https://www.michaelkenna.com/photography/",
+        "https://www.michaelkenna.com/about/"
+      ]),
+    },
+  ]).onConflictDoNothing();
+
+  // Pause 10: Return
+  await db.insert(pauses).values({
+    id: 10,
+    weekNumber: 10,
+    title: "Return",
+    theme: "Coming Home",
+    description: "Your journey comes full circle. This final week is about integration—bringing your practice home to everyday life. Photograph your own world with fresh eyes.",
+    spotifyPlaylistUrl: "https://open.spotify.com/playlist/37i9dQZF1DWXe9gFZCPaLg",
+    spotifyDescription: "Reflective music for completion and new beginnings",
+  }).onConflictDoNothing();
+
+  await db.insert(activities).values([
+    {
+      pauseId: 10,
+      title: "Gratitude Meditation",
+      description: "30 minutes reflecting on your journey. Notice how you've changed. Appreciate what you've discovered.",
+      duration: "30 min",
+      activityType: "meditation",
+      orderIndex: 1,
+    },
+    {
+      pauseId: 10,
+      title: "Weekly Project: Home",
+      description: "Photograph your immediate surroundings—your home, your street, your daily path. See the familiar with beginner's eyes.",
+      duration: "Daily practice",
+      activityType: "project",
+      orderIndex: 2,
+    },
+    {
+      pauseId: 10,
+      title: "Micro-Practice: Daily Commitment",
+      description: "Create a simple daily practice to continue after this course. What will you keep?",
+      duration: "Ongoing",
+      activityType: "micro-practice",
+      orderIndex: 3,
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(locations).values([
+    {
+      pauseId: 10,
+      name: "Ladd's Addition",
+      description: "Portland's historic rose-filled neighborhood. Walk the diagonal streets and photograph home, belonging, and everyday beauty.",
+      address: "SE 16th Ave & Division St, Portland, OR 97202",
+      locationType: "portland",
+    },
+    {
+      pauseId: 10,
+      name: "Murrayhill Neighborhood Park",
+      description: "A familiar community gathering spot. Document the ordinary moments that make a place home.",
+      address: "14142 SW Downing Ct, Beaverton, OR 97008",
+      locationType: "murrayhill",
+    },
+  ]).onConflictDoNothing();
+
+  await db.insert(photographers).values([
+    {
+      pauseId: 10,
+      name: "Sally Mann",
+      description: "Photographer of intimate, personal imagery. Study her ability to find profound meaning in family and home.",
+      externalLink: "https://www.sallymann.com/",
+      sampleImages: JSON.stringify([
+        "https://www.sallymann.com/selected-works/",
+        "https://www.gagosian.com/artists/sally-mann/"
+      ]),
+    },
+  ]).onConflictDoNothing();
 
   console.log("Database seeded successfully!");
 }
