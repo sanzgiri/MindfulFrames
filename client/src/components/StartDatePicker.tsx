@@ -8,10 +8,11 @@ import { useState } from "react";
 
 interface StartDatePickerProps {
   onDateSelect: (date: Date) => void;
+  initialDate?: Date;
 }
 
-export default function StartDatePicker({ onDateSelect }: StartDatePickerProps) {
-  const [date, setDate] = useState<Date>();
+export default function StartDatePicker({ onDateSelect, initialDate }: StartDatePickerProps) {
+  const [date, setDate] = useState<Date | undefined>(initialDate);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {

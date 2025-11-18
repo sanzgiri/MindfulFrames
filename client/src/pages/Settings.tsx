@@ -70,6 +70,7 @@ export default function Settings() {
         <div className="space-y-6">
           <StartDatePicker
             onDateSelect={handleDateSelect}
+            initialDate={user?.startDate ? new Date(user.startDate) : undefined}
           />
 
           <LocationToggle

@@ -17,7 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Welcome} />
       <Route path="/dashboard" component={Home} />
-      <Route path="/pause/:id" component={PauseDetail} />
+      <Route path="/pause/:weekNumber" component={PauseDetail} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
