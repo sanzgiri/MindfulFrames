@@ -7,32 +7,163 @@ import PhotoUpload from "@/components/PhotoUpload";
 import LocationCard from "@/components/LocationCard";
 import PhotographerReference from "@/components/PhotographerReference";
 import SpotifyPlaylist from "@/components/SpotifyPlaylist";
-import { ArrowLeft, Music, MapPin, Camera as CameraIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useLocation, useRoute } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import type { Pause, Activity, Location, Photographer } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { useProgress } from "@/hooks/use-progress";
+import { usePhotos } from "@/hooks/use-photos";
+import { useJournal } from "@/hooks/use-journal";
 import autumnLeaves from '@assets/generated_images/Autumn_leaves_water_droplets_7fbabb58.png';
+import willamette from '@assets/generated_images/Willamette_River_golden_hour_7e552f50.png';
+import forestDawn from '@assets/generated_images/Forest_Park_misty_dawn_07796f10.png';
+import rainDroplets from '@assets/generated_images/Rain_droplets_window_reflection_ff4bc57a.png';
+import mossBark from '@assets/generated_images/Moss_covered_bark_texture_5f821545.png';
+
+const pauseImages = [
+  autumnLeaves,
+  willamette,
+  mossBark,
+  rainDroplets,
+  forestDawn,
+  autumnLeaves,
+  willamette,
+  mossBark,
+  rainDroplets,
+  forestDawn,
+];
+
+function getDateRange(startDate: Date, weekNumber: number): string {
+  const weekStart = new Date(startDate);
+  weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+  
+  return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+}
 
 export default function PauseDetail() {
-  //todo: remove mock functionality - replace with real data
-  const [activities, setActivities] = useState([
-    { id: '1', title: 'Beginner\'s Mind Meditation', duration: '10 minutes', completed: true },
-    { id: '2', title: 'First Sight Photography Project', duration: '20 minutes', completed: false },
-    { id: '3', title: 'Morning Window Observation', duration: '5 minutes', completed: false },
-    { id: '4', title: 'Weekend Excursion', completed: false },
-  ]);
+  const [, params] = useRoute("/pause/:weekNumber");
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const weekNumber = params?.weekNumber ? parseInt(params.weekNumber) : 1;
 
-  const handleToggle = (id: string) => {
-    setActivities(prev => 
-      prev.map(a => a.id === id ? { ...a, completed: !a.completed } : a)
-    );
+  const { data: pauses = [], isLoading: pausesLoading } = useQuery<Pause[]>({
+    queryKey: ["/api/pauses"],
+  });
+
+  const pause = pauses.find(p => p.weekNumber === weekNumber);
+  const pauseNotFound = !pausesLoading && pauses.length > 0 && !pause;
+
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
+    queryKey: ["/api/pauses", pause?.id, "activities"],
+    enabled: !!pause?.id,
+  });
+
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ["/api/pauses", pause?.id, "locations"],
+    enabled: !!pause?.id,
+  });
+
+  const { data: photographers = [] } = useQuery<Photographer[]>({
+    queryKey: ["/api/pauses", pause?.id, "photographers"],
+    enabled: !!pause?.id,
+  });
+
+  const { progress, toggleActivity } = useProgress();
+  const { uploadAndCreatePhoto } = usePhotos(pause?.id);
+  const { entries, createEntry, updateEntry } = useJournal(pause?.id);
+
+  const startDate = user?.startDate ? new Date(user.startDate) : new Date();
+  const dateRange = pause ? getDateRange(startDate, pause.weekNumber) : '';
+
+  const activityItems = activities.map(activity => {
+    const isCompleted = progress.some(p => p.activityId === activity.id);
+    return {
+      id: String(activity.id),
+      title: activity.title,
+      duration: activity.duration || undefined,
+      completed: isCompleted,
+    };
+  });
+
+  const handleActivityToggle = async (activityId: string) => {
+    const activity = activities.find(a => a.id === parseInt(activityId));
+    if (!activity) return;
+    
+    const isCurrentlyCompleted = progress.some(p => p.activityId === activity.id);
+    await toggleActivity(activity.id, !isCurrentlyCompleted);
   };
+
+  const handlePhotoUpload = async (files: File[]) => {
+    if (!pause) return;
+    
+    for (const file of files) {
+      await uploadAndCreatePhoto(file, pause.id);
+    }
+  };
+
+  const handleJournalSave = async (content: string, promptText: string) => {
+    if (!pause) return;
+
+    const existingEntry = entries.find(e => e.prompt === promptText);
+    
+    if (existingEntry) {
+      await updateEntry(existingEntry.id, content);
+    } else {
+      await createEntry({
+        pauseId: pause.id,
+        prompt: promptText,
+        content,
+      });
+    }
+  };
+
+  const defaultJournalPrompts = [
+    `Reflect on this week's ${pause?.title || 'practice'}. What did you notice?`,
+    `How did this week's exercises change your perspective?`,
+  ];
+
+  if (pauseNotFound) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">Pause Not Found</h2>
+          <p className="text-muted-foreground">This pause doesn't exist in your journey.</p>
+          <Button onClick={() => setLocation('/dashboard')} data-testid="button-back-to-dashboard">
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pause || pausesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading pause details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const imageUrl = pauseImages[pause.id - 1] || autumnLeaves;
 
   return (
     <div className="min-h-screen">
       <div 
         className="relative h-[40vh] min-h-[300px] w-full overflow-hidden"
         style={{
-          backgroundImage: `url(${autumnLeaves})`,
+          backgroundImage: `url(${imageUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -44,7 +175,7 @@ export default function PauseDetail() {
             variant="ghost" 
             size="sm"
             className="w-fit text-white hover:bg-white/10"
-            onClick={() => console.log('Go back')}
+            onClick={() => setLocation('/dashboard')}
             data-testid="button-back"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -53,16 +184,16 @@ export default function PauseDetail() {
 
           <div>
             <Badge variant="secondary" className="mb-3 bg-white/20 text-white border-0">
-              Pause 1
+              Pause {pause.weekNumber}
             </Badge>
             <h1 className="text-white text-3xl md:text-4xl font-bold mb-2">
-              Awakening the Gaze
+              {pause.title}
             </h1>
             <p className="text-white/90 text-lg">
-              Learning to See the Present Moment
+              {pause.theme}
             </p>
             <p className="text-white/70 text-sm mt-2">
-              October 25-31, 2025
+              {dateRange}
             </p>
           </div>
         </div>
@@ -84,109 +215,115 @@ export default function PauseDetail() {
               </CardHeader>
               <CardContent className="prose prose-sm max-w-none">
                 <p className="text-muted-foreground">
-                  Late October brings the peak of fall color and the beginning of the rainy season—perfect 
-                  for noticing fresh details on wet surfaces and golden leaves. This week is about learning 
-                  to see familiar surroundings with fresh eyes, as if experiencing them for the first time.
+                  {pause.description || 'Explore this week\'s theme through mindfulness and photography practices.'}
                 </p>
               </CardContent>
             </Card>
 
             <ActivityChecklist
               title="This Week's Activities"
-              activities={activities}
-              onToggle={handleToggle}
+              activities={activityItems}
+              onToggle={handleActivityToggle}
             />
           </TabsContent>
 
           <TabsContent value="practice" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Mindfulness Practice</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <h3 className="font-medium">Beginner's Mind Meditation (10 minutes)</h3>
-                <ol className="space-y-3 text-sm text-muted-foreground list-decimal list-inside">
-                  <li>Sit comfortably by a window overlooking Portland's fall landscape</li>
-                  <li>Take three deep breaths, inhaling the cool, moist air</li>
-                  <li>Imagine seeing the world as if for the first time</li>
-                  <li>When you open your eyes, observe one object nearby with fresh curiosity</li>
-                  <li>Notice colors, textures, light, shadows as if you've never seen them before</li>
-                </ol>
-              </CardContent>
-            </Card>
+            {activities.filter(a => a.activityType === 'meditation').map(activity => (
+              <Card key={activity.id}>
+                <CardHeader>
+                  <CardTitle>Mindfulness Practice</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <h3 className="font-medium">{activity.title} {activity.duration && `(${activity.duration})`}</h3>
+                  {activity.description && (
+                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
+                      <p>{activity.description}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Photography Project: First Sight</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>Choose one ordinary object in your home. Spend 5 minutes just looking at it without your camera.</p>
-                  <p>Take 10 photographs of this single object from different angles. Don't think about composition rules—just explore.</p>
-                </div>
-                <PhotoUpload
-                  onUpload={(files) => console.log('Photos uploaded:', files)}
-                  maxFiles={10}
-                />
-              </CardContent>
-            </Card>
+            {activities.filter(a => a.activityType === 'project').map(activity => (
+              <Card key={activity.id}>
+                <CardHeader>
+                  <CardTitle>Photography Project: {activity.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {activity.description && (
+                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
+                      <p>{activity.description}</p>
+                    </div>
+                  )}
+                  <PhotoUpload
+                    onUpload={handlePhotoUpload}
+                    maxFiles={10}
+                  />
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
 
           <TabsContent value="resources" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <SpotifyPlaylist
-                title="Awakening Playlist"
-                description="Ambient morning, awakening meditation, Brian Eno, Max Richter, Ólafur Arnalds"
-                spotifyUrl="https://open.spotify.com/playlist/example"
-              />
+              {pause.spotifyPlaylistUrl && (
+                <SpotifyPlaylist
+                  title={`${pause.title} Playlist`}
+                  description={pause.spotifyDescription || "Curated music for this week's practice"}
+                  spotifyUrl={pause.spotifyPlaylistUrl}
+                />
+              )}
 
-              <LocationCard
-                name="Hoyt Arboretum"
-                description="Explore the fall foliage with fresh attention"
-                address="4000 SW Fairview Blvd, Portland, OR 97221"
-                onGetDirections={() => {
-                  const address = encodeURIComponent("4000 SW Fairview Blvd, Portland, OR 97221");
-                  window.open(`https://maps.apple.com/?address=${address}`, '_blank');
-                }}
-              />
+              {locations.map(location => (
+                <LocationCard
+                  key={location.id}
+                  name={location.name}
+                  description={location.description || ''}
+                  address={location.address || ''}
+                  onGetDirections={() => {
+                    if (location.address) {
+                      const address = encodeURIComponent(location.address);
+                      window.open(`https://maps.apple.com/?address=${address}`, '_blank');
+                    }
+                  }}
+                />
+              ))}
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Photographer References</h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                <PhotographerReference
-                  name="Saul Leiter"
-                  description="Master of seeing the ordinary with fresh eyes through windows, rain, and reflections"
-                  sampleImages={[
-                    '/api/placeholder/150/150',
-                    '/api/placeholder/150/150',
-                    '/api/placeholder/150/150',
-                  ]}
-                  externalLink="https://www.saulleiter.org"
-                />
-                <PhotographerReference
-                  name="Vivian Maier"
-                  description="Found extraordinary in everyday street scenes with a beginner's mind"
-                  sampleImages={[
-                    '/api/placeholder/150/150',
-                    '/api/placeholder/150/150',
-                    '/api/placeholder/150/150',
-                  ]}
-                  externalLink="https://www.vivianmaier.com"
-                />
+            {photographers.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Photographer References</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {photographers.filter(p => p.externalLink).map(photographer => (
+                    <PhotographerReference
+                      key={photographer.id}
+                      name={photographer.name}
+                      description={photographer.description || ''}
+                      sampleImages={
+                        Array.isArray(photographer.sampleImages) 
+                          ? photographer.sampleImages as string[]
+                          : ['/api/placeholder/150/150', '/api/placeholder/150/150', '/api/placeholder/150/150']
+                      }
+                      externalLink={photographer.externalLink!}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="journal" className="space-y-6">
-            <JournalEntry
-              prompt="Which image surprised you? What did you notice that you'd never seen before?"
-              onSave={(content) => console.log('Journal saved:', content)}
-            />
-            <JournalEntry
-              prompt="How did practicing beginner's mind change your relationship with familiar objects?"
-              onSave={(content) => console.log('Journal saved:', content)}
-            />
+            {defaultJournalPrompts.map((prompt, index) => {
+              const existingEntry = entries.find(e => e.prompt === prompt);
+              return (
+                <JournalEntry
+                  key={index}
+                  prompt={prompt}
+                  initialValue={existingEntry?.content || ''}
+                  onSave={(content) => handleJournalSave(content, prompt)}
+                />
+              );
+            })}
           </TabsContent>
         </Tabs>
       </div>
