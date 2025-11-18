@@ -1,17 +1,31 @@
 import HeroSection from "@/components/HeroSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Brain, Camera, BookOpen, MapPin } from "lucide-react";
 import StartDatePicker from "@/components/StartDatePicker";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 export default function Welcome() {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const { user, isAuthenticated, login, updateSettings } = useAuth();
+  const [, setLocation] = useLocation();
 
   const handleGetStarted = () => {
+    if (!isAuthenticated) {
+      login();
+      return;
+    }
     setShowDatePicker(true);
     const element = document.getElementById('date-picker');
     element?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleDateSelect = async (date: Date) => {
+    if (isAuthenticated) {
+      await updateSettings({ startDate: date.toISOString() });
+      setLocation('/dashboard');
+    }
   };
 
   return (
@@ -130,12 +144,7 @@ export default function Welcome() {
               </p>
             </div>
             <StartDatePicker
-              onDateSelect={(date) => {
-                console.log('Journey starts:', date);
-                setTimeout(() => {
-                  console.log('Navigate to dashboard');
-                }, 1000);
-              }}
+              onDateSelect={handleDateSelect}
             />
           </section>
         )}

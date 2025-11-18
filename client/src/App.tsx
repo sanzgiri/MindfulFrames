@@ -10,6 +10,7 @@ import PauseDetail from "@/pages/PauseDetail";
 import Gallery from "@/pages/Gallery";
 import Settings from "@/pages/Settings";
 import { Home as HomeIcon, Camera, Settings as SettingsIcon } from "lucide-react";
+import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
@@ -69,11 +70,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="pb-16 md:pb-0">
-          <Router />
-          <BottomNav />
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className="pb-16 md:pb-0">
+            <Router />
+            <BottomNav />
+          </div>
+          <Toaster />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
