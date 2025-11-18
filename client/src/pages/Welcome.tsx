@@ -2,14 +2,22 @@ import HeroSection from "@/components/HeroSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Camera, BookOpen, MapPin } from "lucide-react";
 import StartDatePicker from "@/components/StartDatePicker";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
 export default function Welcome() {
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const { user, isAuthenticated, login, updateSettings } = useAuth();
-  const [, setLocation] = useLocation();
+  const { user, isAuthenticated, isLoading, login, updateSettings } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  // Redirect to dashboard if user is authenticated and has a start date
+  useEffect(() => {
+    // Only redirect if we're on the root path, user is loaded, authenticated, and has a start date
+    if (!isLoading && location === '/' && isAuthenticated && user?.startDate) {
+      setLocation('/dashboard');
+    }
+  }, [isLoading, location, isAuthenticated, user?.startDate, setLocation]);
 
   const handleGetStarted = () => {
     if (!isAuthenticated) {

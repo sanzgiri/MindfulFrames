@@ -24,7 +24,7 @@ export default function PauseCard({
 }: PauseCardProps) {
   return (
     <Card 
-      className="hover-elevate active-elevate-2 cursor-pointer overflow-hidden"
+      className="cursor-pointer overflow-visible"
       onClick={onClick}
       data-testid={`card-pause-${pauseNumber}`}
     >
