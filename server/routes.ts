@@ -89,6 +89,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Locations routes
+  app.get('/api/pauses/:pauseId/locations', isAuthenticated, async (req, res) => {
+    try {
+      const pauseId = parseInt(req.params.pauseId);
+      const locations = await storage.getLocationsByPause(pauseId);
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ message: "Failed to fetch locations" });
+    }
+  });
+
+  // Photographers routes
+  app.get('/api/pauses/:pauseId/photographers', isAuthenticated, async (req, res) => {
+    try {
+      const pauseId = parseInt(req.params.pauseId);
+      const photographers = await storage.getPhotographersByPause(pauseId);
+      res.json(photographers);
+    } catch (error) {
+      console.error("Error fetching photographers:", error);
+      res.status(500).json({ message: "Failed to fetch photographers" });
+    }
+  });
+
   // User progress routes
   app.get('/api/user/progress', isAuthenticated, async (req: any, res) => {
     try {
