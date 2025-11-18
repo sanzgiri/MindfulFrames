@@ -16,6 +16,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProgress } from "@/hooks/use-progress";
 import { usePhotos } from "@/hooks/use-photos";
 import { useJournal } from "@/hooks/use-journal";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import autumnLeaves from '@assets/generated_images/Autumn_leaves_water_droplets_7fbabb58.png';
 import willamette from '@assets/generated_images/Willamette_River_golden_hour_7e552f50.png';
 import forestDawn from '@assets/generated_images/Forest_Park_misty_dawn_07796f10.png';
@@ -52,11 +54,28 @@ function getDateRange(startDate: Date, weekNumber: number): string {
 export default function PauseDetail() {
   const [, params] = useRoute("/pause/:weekNumber");
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const weekNumber = params?.weekNumber ? parseInt(params.weekNumber) : 1;
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Please log in",
+        description: "You need to log in to access pause content",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
 
   const { data: pauses = [], isLoading: pausesLoading } = useQuery<Pause[]>({
     queryKey: ["/api/pauses"],
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   const pause = pauses.find(p => p.weekNumber === weekNumber);
@@ -64,17 +83,20 @@ export default function PauseDetail() {
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
     queryKey: ["/api/pauses", pause?.id, "activities"],
-    enabled: !!pause?.id,
+    enabled: !!pause?.id && isAuthenticated,
+    retry: false,
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ["/api/pauses", pause?.id, "locations"],
-    enabled: !!pause?.id,
+    enabled: !!pause?.id && isAuthenticated,
+    retry: false,
   });
 
   const { data: photographers = [] } = useQuery<Photographer[]>({
     queryKey: ["/api/pauses", pause?.id, "photographers"],
-    enabled: !!pause?.id,
+    enabled: !!pause?.id && isAuthenticated,
+    retry: false,
   });
 
   const { progress, toggleActivity } = useProgress();
@@ -228,40 +250,73 @@ export default function PauseDetail() {
           </TabsContent>
 
           <TabsContent value="practice" className="space-y-6">
-            {activities.filter(a => a.activityType === 'meditation').map(activity => (
-              <Card key={activity.id}>
-                <CardHeader>
-                  <CardTitle>Mindfulness Practice</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <h3 className="font-medium">{activity.title} {activity.duration && `(${activity.duration})`}</h3>
-                  {activity.description && (
-                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
-                      <p>{activity.description}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Mindfulness Practice Guide</CardTitle>
+              </CardHeader>
+              <CardContent className="prose prose-sm max-w-none space-y-4">
+                {activities.filter(a => a.activityType === 'meditation').length > 0 ? (
+                  activities.filter(a => a.activityType === 'meditation').map(activity => (
+                    <div key={activity.id} className="space-y-3 pb-4 border-b last:border-0 last:pb-0">
+                      <h3 className="font-semibold text-base text-foreground">{activity.title}</h3>
+                      {activity.duration && (
+                        <p className="text-sm text-muted-foreground">Duration: {activity.duration}</p>
+                      )}
+                      {activity.description && (
+                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      )}
+                      <div className="text-sm text-muted-foreground mt-3">
+                        <p className="font-medium text-foreground mb-2">How to practice:</p>
+                        <ol className="space-y-1 ml-4 list-decimal">
+                          <li>Find a quiet space where you won't be disturbed</li>
+                          <li>Sit comfortably with your spine upright but relaxed</li>
+                          <li>Set a timer for the recommended duration</li>
+                          <li>Begin the practice as described, returning to the focus point whenever your mind wanders</li>
+                          <li>When the timer sounds, take a moment to notice how you feel before ending</li>
+                        </ol>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No meditation practices assigned for this pause.</p>
+                )}
+              </CardContent>
+            </Card>
 
-            {activities.filter(a => a.activityType === 'project').map(activity => (
-              <Card key={activity.id}>
-                <CardHeader>
-                  <CardTitle>Photography Project: {activity.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {activity.description && (
-                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
-                      <p>{activity.description}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Photography Project Guide</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activities.filter(a => a.activityType === 'project').length > 0 ? (
+                  activities.filter(a => a.activityType === 'project').map(activity => (
+                    <div key={activity.id} className="space-y-3">
+                      <h3 className="font-semibold text-base">{activity.title}</h3>
+                      {activity.description && (
+                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      )}
+                      <div className="text-sm text-muted-foreground mt-3">
+                        <p className="font-medium text-foreground mb-2">Tips for this project:</p>
+                        <ul className="space-y-1 ml-4 list-disc">
+                          <li>Take your time - this is about seeing, not just shooting</li>
+                          <li>Experiment with different times of day and lighting conditions</li>
+                          <li>Review your photos each evening and notice what draws your eye</li>
+                          <li>Don't judge your work - this is a practice, not a performance</li>
+                        </ul>
+                      </div>
+                      <div className="mt-4 pt-4 border-t">
+                        <PhotoUpload
+                          onUpload={handlePhotoUpload}
+                          maxFiles={10}
+                        />
+                      </div>
                     </div>
-                  )}
-                  <PhotoUpload
-                    onUpload={handlePhotoUpload}
-                    maxFiles={10}
-                  />
-                </CardContent>
-              </Card>
-            ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No photography projects assigned for this pause.</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="resources" className="space-y-6">

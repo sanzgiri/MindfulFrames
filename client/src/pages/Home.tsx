@@ -13,6 +13,8 @@ import type { Pause } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useProgress } from "@/hooks/use-progress";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const pauseImages = [
   autumnLeaves,
@@ -50,21 +52,43 @@ function getCurrentWeek(startDate: Date): number {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { progress, getCompletedCount } = useProgress();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Please log in",
+        description: "You need to log in to access your dashboard",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, authLoading, toast]);
 
   const { data: pauses = [], isLoading: pausesLoading } = useQuery<Pause[]>({
     queryKey: ["/api/pauses"],
+    retry: false,
+    enabled: isAuthenticated,
   });
 
   const { data: allActivities = [], isLoading: activitiesLoading } = useQuery<any[]>({
     queryKey: ["/api/pauses/1/activities"],
-    enabled: pauses.length > 0,
+    enabled: pauses.length > 0 && isAuthenticated,
+    retry: false,
     queryFn: async () => {
       const activities = [];
       for (const pause of pauses) {
         const response = await fetch(`/api/pauses/${pause.id}/activities`, { credentials: "include" });
+        if (response.status === 401) {
+          window.location.href = "/api/login";
+          return [];
+        }
         if (response.ok) {
           const pauseActivities = await response.json();
           activities.push(...pauseActivities);
@@ -76,10 +100,14 @@ export default function Home() {
 
   const { data: photos = [] } = useQuery<any[]>({
     queryKey: ["/api/photos"],
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   const { data: journalEntries = [] } = useQuery<any[]>({
     queryKey: ["/api/journal"],
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   const startDate = user?.startDate ? new Date(user.startDate) : new Date();

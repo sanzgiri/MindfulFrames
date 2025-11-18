@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface AuthContextType {
   user: User | null | undefined;
@@ -17,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, isError, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
   });
@@ -43,10 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await updateSettingsMutation.mutateAsync(settings);
   };
 
+  // Check if the error is a 401 Unauthorized
+  const is401Error = isError && error && isUnauthorizedError(error as Error);
+  const isAuthenticated = !!user && !is401Error;
+
   const value: AuthContextType = {
     user: user ?? null,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     login,
     logout,
     updateSettings,
