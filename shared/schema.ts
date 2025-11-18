@@ -8,6 +8,7 @@ import {
   integer,
   boolean,
   text,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -55,7 +56,9 @@ export const activities = pgTable("activities", {
   duration: varchar("duration", { length: 50 }),
   activityType: varchar("activity_type", { length: 50 }).notNull(), // 'meditation', 'project', 'micro-practice'
   orderIndex: integer("order_index").default(0),
-});
+}, (table) => [
+  unique().on(table.pauseId, table.title),
+]);
 
 export const userProgress = pgTable("user_progress", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -63,7 +66,9 @@ export const userProgress = pgTable("user_progress", {
   activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: 'cascade' }),
   completed: boolean("completed").default(false),
   completedAt: timestamp("completed_at"),
-});
+}, (table) => [
+  unique().on(table.userId, table.activityId),
+]);
 
 export const journalEntries = pgTable("journal_entries", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -93,7 +98,9 @@ export const locations = pgTable("locations", {
   description: text("description"),
   address: text("address"),
   locationType: varchar("location_type", { length: 50 }).default('portland'), // 'portland' or 'murrayhill'
-});
+}, (table) => [
+  unique().on(table.pauseId, table.name),
+]);
 
 export const photographers = pgTable("photographers", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -102,7 +109,9 @@ export const photographers = pgTable("photographers", {
   description: text("description"),
   externalLink: text("external_link"),
   sampleImages: jsonb("sample_images"), // array of image URLs
-});
+}, (table) => [
+  unique().on(table.pauseId, table.name),
+]);
 
 // Relations
 export const pausesRelations = relations(pauses, ({ many }) => ({

@@ -7,6 +7,9 @@ export function useProgress() {
 
   const { data: progress = [], isLoading } = useQuery<UserProgress[]>({
     queryKey: ["/api/user/progress"],
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const updateProgressMutation = useMutation({

@@ -56,9 +56,9 @@ export default function PauseCard({
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Progress</span>
-            <span>{progress}%</span>
+            <span data-testid={`progress-pause-${pauseNumber}`}>{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2" data-testid={`progress-pause-${pauseNumber}`} />
+          <Progress value={progress} className="h-2" data-testid={`progress-bar-pause-${pauseNumber}`} />
         </div>
         <div className="flex gap-4 text-xs text-muted-foreground pt-2">
           <div className="flex items-center gap-1">
