@@ -1,6 +1,74 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
 .DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vite
 server/public
 vite.config.ts.*
+
+# Database
+migrations/
+*.db
+*.sqlite
+
+# Session storage
+sessions/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Replit specific (keep these if you're using Replit)
+.config/
+.local/
+.replit
+replit.md
+
+# Archives
 *.tar.gz
+*.zip
+
+# Optional: Drizzle Kit generated files (if you want to regenerate migrations)
+# migrations/
