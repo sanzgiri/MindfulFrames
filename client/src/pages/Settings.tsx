@@ -4,24 +4,14 @@ import LocationToggle from "@/components/LocationToggle";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const { user, updateSettings } = useAuth();
   const { toast } = useToast();
-  const [location, setLocation] = useState<'portland' | 'murrayhill'>(
-    (user?.locationPreference as 'portland' | 'murrayhill') || 'portland'
-  );
   const [darkMode, setDarkMode] = useState(false);
-
-  // Update local state when user data changes
-  useEffect(() => {
-    if (user?.locationPreference) {
-      setLocation(user.locationPreference as 'portland' | 'murrayhill');
-    }
-  }, [user?.locationPreference]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -45,7 +35,6 @@ export default function Settings() {
   };
 
   const handleLocationChange = async (newLocation: 'portland' | 'murrayhill') => {
-    setLocation(newLocation);
     try {
       await updateSettings({ locationPreference: newLocation });
       toast({
@@ -81,7 +70,7 @@ export default function Settings() {
           />
 
           <LocationToggle
-            selectedLocation={location}
+            selectedLocation={(user?.locationPreference as 'portland' | 'murrayhill') || 'portland'}
             onLocationChange={handleLocationChange}
           />
 
