@@ -38,10 +38,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getMockUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
-        // Create a demo user if it doesn't exist
+        // Create a demo user if it doesn't exist with unique email
         await storage.upsertUser({
           id: userId,
-          email: "demo@example.com",
+          email: `${userId}@demo.local`,
           firstName: "Demo",
           lastName: "User",
           profileImageUrl: null,
