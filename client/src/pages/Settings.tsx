@@ -4,7 +4,7 @@ import LocationToggle from "@/components/LocationToggle";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +15,13 @@ export default function Settings() {
     (user?.locationPreference as 'portland' | 'murrayhill') || 'portland'
   );
   const [darkMode, setDarkMode] = useState(false);
+
+  // Update local state when user data changes
+  useEffect(() => {
+    if (user?.locationPreference) {
+      setLocation(user.locationPreference as 'portland' | 'murrayhill');
+    }
+  }, [user?.locationPreference]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
