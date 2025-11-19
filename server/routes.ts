@@ -10,47 +10,26 @@ import {
   updateUserSettingsSchema,
 } from "@shared/schema";
 
-// Mock user ID for testing without authentication
-// Use session to create unique user per browser session
-function getMockUserId(req: any): string {
-  if (!req.session.mockUserId) {
-    req.session.mockUserId = `demo-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-  return req.session.mockUserId;
-}
+// Single shared user for the app - all sessions use the same user
+const SHARED_USER_ID = "main-user";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup session middleware for demo users
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'demo-secret-key',
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-    }
-  }));
-
-  // Auth routes - mocked for now
+  // Auth routes - return the single shared user
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(SHARED_USER_ID);
       if (!user) {
-        // Create a demo user if it doesn't exist with unique email
+        // Create the main user if it doesn't exist
         await storage.upsertUser({
-          id: userId,
-          email: `${userId}@demo.local`,
-          firstName: "Demo",
+          id: SHARED_USER_ID,
+          email: "user@mindfulframes.app",
+          firstName: "Mindful",
           lastName: "User",
           profileImageUrl: null,
         });
-        const newUser = await storage.getUser(userId);
-        res.json(newUser);
-      } else {
-        res.json(user);
+        user = await storage.getUser(SHARED_USER_ID);
       }
+      res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -60,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User settings
   app.put('/api/user/settings', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       console.log('Updating settings for user:', userId);
       console.log('Request body:', req.body);
       
@@ -169,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User progress routes
   app.get('/api/user/progress', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const progress = await storage.getUserProgress(userId);
       res.json(progress);
     } catch (error) {
@@ -180,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/user/progress', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const validated = updateUserProgressSchema.parse(req.body);
       
       const updated = await storage.updateProgress(
@@ -198,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Journal entries routes
   app.get('/api/journal', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
       const entries = await storage.getUserJournalEntries(userId, pauseId);
       res.json(entries);
@@ -210,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/journal', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const validated = insertJournalEntrySchema.parse({
         ...req.body,
         userId,
@@ -244,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Photos routes
   app.get('/api/photos', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
       const photos = await storage.getUserPhotos(userId, pauseId);
       res.json(photos);
@@ -256,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/photos', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const validated = insertPhotoSchema.parse({
         ...req.body,
         userId,
@@ -278,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/photos/:id', async (req: any, res) => {
     try {
-      const userId = getMockUserId(req);
+      const userId = SHARED_USER_ID;
       const id = parseInt(req.params.id);
       
       const photos = await storage.getUserPhotos(userId);
