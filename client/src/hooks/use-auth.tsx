@@ -27,8 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (settings: { startDate?: string; locationPreference?: string }) => {
       return await apiRequest("PUT", "/api/user/settings", settings);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      // Wait for the query to refetch
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
@@ -44,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = async (settings: { startDate?: string; locationPreference?: string }) => {
     await updateSettingsMutation.mutateAsync(settings);
+    // Ensure the query has refetched before returning
+    await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
   };
 
   // Check if the error is a 401 Unauthorized

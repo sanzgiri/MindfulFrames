@@ -32,10 +32,7 @@ export default function Welcome() {
   const handleDateSelect = async (date: Date) => {
     try {
       await updateSettings({ startDate: date.toISOString() });
-      // Give the query a moment to refetch
-      setTimeout(() => {
-        setLocation('/dashboard');
-      }, 100);
+      setLocation('/dashboard');
     } catch (error) {
       console.error('Failed to save start date:', error);
     }
