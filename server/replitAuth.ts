@@ -10,9 +10,10 @@ import { storage } from "./storage";
 
 const getOidcConfig = memoize(
   async () => {
+    const replId = process.env.REPL_ID || 'dummy-repl-id';
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+      replId
     );
   },
   { maxAge: 3600 * 1000 }
