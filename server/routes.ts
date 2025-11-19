@@ -41,7 +41,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/user/settings', async (req: any, res) => {
     try {
       const userId = MOCK_USER_ID;
+      console.log('Updating settings for user:', userId);
+      console.log('Request body:', req.body);
+      
       const validated = updateUserSettingsSchema.parse(req.body);
+      console.log('Validated data:', validated);
       
       const settings: any = {};
       if (validated.startDate) {
@@ -50,8 +54,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (validated.locationPreference) {
         settings.locationPreference = validated.locationPreference;
       }
-
+      
+      console.log('Settings to update:', settings);
       const user = await storage.updateUserSettings(userId, settings);
+      console.log('Updated user:', user);
       res.json(user);
     } catch (error) {
       console.error("Error updating user settings:", error);
