@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
   insertJournalEntrySchema,
@@ -10,15 +9,28 @@ import {
   updateUserSettingsSchema,
 } from "@shared/schema";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  await setupAuth(app);
+// Mock user ID for testing without authentication
+const MOCK_USER_ID = "demo-user";
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth routes - mocked for now
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const user = await storage.getUser(MOCK_USER_ID);
+      if (!user) {
+        // Create a demo user if it doesn't exist
+        await storage.upsertUser({
+          id: MOCK_USER_ID,
+          email: "demo@example.com",
+          firstName: "Demo",
+          lastName: "User",
+          profileImageUrl: null,
+        });
+        const newUser = await storage.getUser(MOCK_USER_ID);
+        res.json(newUser);
+      } else {
+        res.json(user);
+      }
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -26,9 +38,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User settings
-  app.put('/api/user/settings', isAuthenticated, async (req: any, res) => {
+  app.put('/api/user/settings', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validated = updateUserSettingsSchema.parse(req.body);
       
       const settings: any = {};
@@ -48,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Pauses routes
-  app.get('/api/pauses', isAuthenticated, async (req, res) => {
+  app.get('/api/pauses', async (req, res) => {
     try {
       const pauses = await storage.getAllPauses();
       res.json(pauses);
@@ -58,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/pauses/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/pauses/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const pause = await storage.getPause(id);
@@ -78,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activities routes
-  app.get('/api/activities', isAuthenticated, async (req, res) => {
+  app.get('/api/activities', async (req, res) => {
     try {
       const pauses = await storage.getAllPauses();
       const allActivities = [];
@@ -93,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/pauses/:pauseId/activities', isAuthenticated, async (req, res) => {
+  app.get('/api/pauses/:pauseId/activities', async (req, res) => {
     try {
       const pauseId = parseInt(req.params.pauseId);
       const activities = await storage.getActivitiesByPause(pauseId);
@@ -105,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Locations routes
-  app.get('/api/pauses/:pauseId/locations', isAuthenticated, async (req, res) => {
+  app.get('/api/pauses/:pauseId/locations', async (req, res) => {
     try {
       const pauseId = parseInt(req.params.pauseId);
       const locations = await storage.getLocationsByPause(pauseId);
@@ -117,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Photographers routes
-  app.get('/api/pauses/:pauseId/photographers', isAuthenticated, async (req, res) => {
+  app.get('/api/pauses/:pauseId/photographers', async (req, res) => {
     try {
       const pauseId = parseInt(req.params.pauseId);
       const photographers = await storage.getPhotographersByPause(pauseId);
@@ -129,9 +141,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User progress routes
-  app.get('/api/user/progress', isAuthenticated, async (req: any, res) => {
+  app.get('/api/user/progress', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const progress = await storage.getUserProgress(userId);
       res.json(progress);
     } catch (error) {
@@ -140,9 +152,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/user/progress', isAuthenticated, async (req: any, res) => {
+  app.put('/api/user/progress', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validated = updateUserProgressSchema.parse(req.body);
       
       const updated = await storage.updateProgress(
@@ -158,9 +170,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Journal entries routes
-  app.get('/api/journal', isAuthenticated, async (req: any, res) => {
+  app.get('/api/journal', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
       const entries = await storage.getUserJournalEntries(userId, pauseId);
       res.json(entries);
@@ -170,9 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/journal', isAuthenticated, async (req: any, res) => {
+  app.post('/api/journal', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validated = insertJournalEntrySchema.parse({
         ...req.body,
         userId,
@@ -186,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/journal/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/journal/:id', async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { content } = req.body;
@@ -204,9 +216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Photos routes
-  app.get('/api/photos', isAuthenticated, async (req: any, res) => {
+  app.get('/api/photos', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
       const photos = await storage.getUserPhotos(userId, pauseId);
       res.json(photos);
@@ -216,9 +228,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/photos', isAuthenticated, async (req: any, res) => {
+  app.post('/api/photos', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validated = insertPhotoSchema.parse({
         ...req.body,
         userId,
@@ -238,9 +250,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/photos/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/photos/:id', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const id = parseInt(req.params.id);
       
       const photos = await storage.getUserPhotos(userId);
@@ -267,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object storage routes
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+  app.post("/api/objects/upload", async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
@@ -278,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/objects/:objectPath(*)", isAuthenticated, async (req, res) => {
+  app.get("/objects/:objectPath(*)", async (req, res) => {
     const objectStorageService = new ObjectStorageService();
     try {
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
