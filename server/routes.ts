@@ -17,6 +17,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes - return the single shared user
   app.get('/api/auth/user', async (req: any, res) => {
     try {
+      // Disable caching for user data
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       let user = await storage.getUser(SHARED_USER_ID);
       if (!user) {
         // Create the main user if it doesn't exist
