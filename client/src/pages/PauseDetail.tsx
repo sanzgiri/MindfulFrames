@@ -58,19 +58,7 @@ export default function PauseDetail() {
   const { toast } = useToast();
   const weekNumber = params?.weekNumber ? parseInt(params.weekNumber) : 1;
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Please log in",
-        description: "You need to log in to access pause content",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [isAuthenticated, authLoading, toast]);
+  // Authentication is disabled - using demo user
 
   const { data: pauses = [], isLoading: pausesLoading } = useQuery<Pause[]>({
     queryKey: ["/api/pauses"],

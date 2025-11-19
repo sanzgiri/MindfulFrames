@@ -33,11 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const login = () => {
-    window.location.href = "/api/login";
+    // No-op for now - authentication is disabled
+    console.log("Login not implemented - using demo user");
   };
 
   const logout = () => {
-    window.location.href = "/api/logout";
+    // No-op for now - authentication is disabled
+    console.log("Logout not implemented - using demo user");
   };
 
   const updateSettings = async (settings: { startDate?: string; locationPreference?: string }) => {
@@ -46,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check if the error is a 401 Unauthorized
   const is401Error = isError && error && isUnauthorizedError(error as Error);
-  const isAuthenticated = !!user && !is401Error;
+  // Always treat as authenticated since we're using a demo user
+  const isAuthenticated = true;
 
   const value: AuthContextType = {
     user: user ?? null,
