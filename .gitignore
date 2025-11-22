@@ -72,3 +72,5 @@ replit.md
 
 # Optional: Drizzle Kit generated files (if you want to regenerate migrations)
 # migrations/
+.vercel
+.env*.local
