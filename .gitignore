@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Build outputs
 dist/
@@ -39,8 +38,10 @@ lerna-debug.log*
 server/public
 vite.config.ts.*
 
+# Deployment platform dirs
+.vercel
+
 # Database
-migrations/
 *.db
 *.sqlite
 
@@ -72,5 +73,3 @@ replit.md
 
 # Optional: Drizzle Kit generated files (if you want to regenerate migrations)
 # migrations/
-.vercel
-.env*.local

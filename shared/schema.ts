@@ -14,7 +14,11 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table - mandatory for Replit Auth
+// Session storage table.
+// NOTE: Deprecated — this app currently runs single-user with no auth/session
+// store, so nothing reads or writes this table. Kept (rather than dropped) to
+// avoid a destructive migration on existing deployments. Safe to remove if you
+// confirm no environment still has a populated `sessions` table you care about.
 export const sessions = pgTable(
   "sessions",
   {
@@ -25,7 +29,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - mandatory for Replit Auth
+// User storage table.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),

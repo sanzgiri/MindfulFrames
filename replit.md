@@ -65,7 +65,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication and Authorization
 
-**Provider**: Replit Auth (OpenID Connect) for zero-configuration user authentication.
+> **⚠️ Current state (updated):** Authentication has been **removed**. The app
+> now runs **single-user**: every request uses a shared user id (`main-user`)
+> defined in `server/routes.ts`, and the client always treats itself as
+> authenticated. There is no login, no Passport/OpenID, and no session store.
+> The `sessions` table remains in the schema only to avoid a destructive
+> migration and is unused. The description below documents the *original*
+> Replit Auth design and is retained for historical context.
+
+**Provider** *(original design)*: Replit Auth (OpenID Connect) for zero-configuration user authentication.
 
 **Session Management**: Server-side sessions stored in PostgreSQL with configurable TTL and automatic cleanup. Sessions use cryptographically secure secrets and HTTP-only cookies.
 
@@ -86,7 +94,7 @@ Preferred communication style: Simple, everyday language.
 
 ### External Dependencies
 
-**Authentication**: Replit Auth (OpenID Connect) for user identity management.
+**Authentication**: None at runtime (single shared `main-user`). *(Originally Replit Auth / OpenID Connect — now removed.)*
 
 **Database**: Neon serverless PostgreSQL for relational data storage with WebSocket connection support.
 

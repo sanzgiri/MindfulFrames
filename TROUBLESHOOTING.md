@@ -1,80 +1,54 @@
-# Settings Not Persisting - Troubleshooting Guide
+# Settings Not Persisting — RESOLVED
 
-## The Problem
-Settings (start date and location preference) are not persisting when you refresh the browser.
+> **Status: ✅ Resolved.** This document is kept for historical context only.
+> The settings-persistence issue described below has been fixed. If settings
+> ever stop persisting again, the debugging steps further down are still useful.
 
-## What We Fixed
-1. ✅ Replaced session-based unique users with a single shared user (`main-user`)
-2. ✅ Removed local React state in Settings component - now reads directly from user data
-3. ✅ Database updates ARE working (we can see in logs that settings are saved)
+## What the issue was
+Settings (start date and location preference) appeared to save but reset on
+page refresh.
 
-## What's Still Wrong
-The settings appear to save but reset on page refresh.
+## How it was fixed
+1. ✅ Single shared user (`main-user`) instead of session-based unique users.
+2. ✅ The Settings component reads directly from user data (no stale local state).
+3. ✅ React Query `staleTime` is `0` (always refetches fresh) — see
+   `client/src/lib/queryClient.ts`. (An earlier version used `staleTime: Infinity`,
+   which caused the stale-cache symptom.)
+4. ✅ `/api/auth/user` sends `Cache-Control: no-store` and the client fetches
+   with `cache: "no-store"`.
 
-## Root Cause Hypothesis
-The issue is likely that **the production database and local database are different**. You might be:
-- Testing locally (connects to Neon database)
-- But the browser might be showing the production app from Render
-- OR there's a caching issue in the browser/React Query
+So both the backend write **and** the frontend read are now consistent.
 
-## Next Steps to Debug (When You're Ready)
+---
 
-### 1. Verify Which App You're Using
-Open browser DevTools (F12) → Network tab → Refresh page → Look at the request to `/api/auth/user`
-- If it goes to `localhost:3000` → you're on local
-- If it goes to `mindful-frames...onrender.com` → you're on production
+## If it regresses: debugging steps
 
-### 2. Check Local Database
-Run: `npm run dev` (starts local server on port 3000)
-Then visit: http://localhost:3000
-Change settings, refresh, see if they stick.
+### 1. Verify which app you're using
+DevTools (F12) → Network → refresh → inspect the `/api/auth/user` request:
+- `localhost:3000` → local
+- `mindful-frames...onrender.com` → production
 
-### 3. Check Production Database
-The production app needs database seeding:
-1. Go to https://dashboard.render.com
-2. Find "mindful-frames" service
-3. Click "Shell" tab
-4. Run: `npm run db:seed`
+A very common cause of "it didn't save" is editing on **local** but viewing
+**production** (or vice versa) — they use different databases.
 
-### 4. Clear Browser Cache
-Sometimes React Query or browser cache causes issues:
-- Hard refresh: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows)
-- Or open in Incognito/Private window
-
-### 5. Check React Query Cache
-The query client has `staleTime: Infinity` which means it never refetches automatically.
-This could cause the old cached data to persist.
-
-## Quick Fix to Try
-In `client/src/lib/queryClient.ts`, change line 48:
-```typescript
-staleTime: Infinity,  // Change this to: staleTime: 0,
+### 2. Check the local database
+```bash
+npm run dev          # local server on :3000
+# visit http://localhost:3000, change settings, refresh
 ```
 
-This will make React Query always fetch fresh data from the server.
-
-## Files That Matter
-- `/server/routes.ts` - API endpoints (uses SHARED_USER_ID = "main-user")
-- `/client/src/pages/Settings.tsx` - Settings UI (now reads from user.locationPreference)
-- `/client/src/hooks/use-auth.tsx` - User data fetching
-- `/client/src/lib/queryClient.ts` - React Query config (staleTime setting)
-- `/.env.local` - Database connection (local only)
-
-## Database Info
-- Database: Neon PostgreSQL (serverless)
-- Connection: In `.env.local` (DATABASE_URL)
-- Single user ID: `main-user`
-- Tables: users, pauses, activities, journal_entries, photos, user_progress, locations, photographers
-
-## Contact Points
-The system logs show updates ARE happening:
-```
-Updating settings for user: main-user
-Updated user: {
-  locationPreference: 'murrayhill',
-  startDate: 2025-11-18T08:00:00.000Z,
-  ...
-}
+### 3. Check / seed the production database
+Render Dashboard → service → **Shell**:
+```bash
+npm run db:seed
 ```
 
-So the backend IS working. The issue is frontend not displaying the saved values.
+### 4. Clear browser cache
+Hard refresh (Cmd/Ctrl+Shift+R) or use a private window.
+
+## Files that matter
+- `server/routes.ts` — API endpoints (uses `SHARED_USER_ID = "main-user"`)
+- `client/src/pages/Settings.tsx` — Settings UI (reads `user.locationPreference`)
+- `client/src/hooks/use-auth.tsx` — user data fetching
+- `client/src/lib/queryClient.ts` — React Query config (`staleTime: 0`)
+- `.env.local` — database connection (local only)

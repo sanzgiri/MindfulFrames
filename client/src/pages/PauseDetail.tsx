@@ -76,7 +76,16 @@ export default function PauseDetail() {
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ["/api/pauses", pause?.id, "locations"],
+    queryKey: ["/api/pauses", pause?.id, "locations", user?.locationPreference ?? "portland"],
+    queryFn: async () => {
+      const loc = user?.locationPreference ?? "portland";
+      const res = await fetch(
+        `/api/pauses/${pause?.id}/locations?locationType=${encodeURIComponent(loc)}`,
+        { credentials: "include", cache: "no-store" }
+      );
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!pause?.id && isAuthenticated,
     retry: false,
   });

@@ -1,8 +1,7 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import session from "express-session";
+import { ObjectStorageService, ObjectNotFoundError, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "./objectStorage";
 import {
   insertJournalEntrySchema,
   insertPhotoSchema,
@@ -12,6 +11,69 @@ import {
 
 // Single shared user for the app - all sessions use the same user
 const SHARED_USER_ID = "main-user";
+
+const VALID_LOCATIONS = ["portland", "murrayhill"] as const;
+type LocationType = (typeof VALID_LOCATIONS)[number];
+
+/**
+ * Parse a route param as a positive integer id.
+ * Returns null for anything that isn't a valid id (e.g. "abc", "-1", "1.5").
+ */
+function parseId(raw: string): number | null {
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * Parse an optional ?pauseId= query value. Invalid values are treated as
+ * "not provided" (undefined) rather than producing NaN.
+ */
+function parsePauseIdQuery(raw: unknown): number | undefined {
+  if (typeof raw !== "string" || raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
+/**
+ * Minimal in-memory rate limiter for the unauthenticated upload-URL endpoint.
+ * Keyed by client IP; allows MAX_REQ requests per WINDOW_MS window. Good enough
+ * for a single-user personal app to avoid runaway storage-cost abuse.
+ */
+const WINDOW_MS = 60_000;
+const MAX_REQ = 30;
+const hits = new Map<string, { count: number; resetAt: number }>();
+const uploadRateLimiter: RequestHandler = (req, res, next) => {
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const entry = hits.get(key);
+  if (!entry || now > entry.resetAt) {
+    hits.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return next();
+  }
+  if (entry.count >= MAX_REQ) {
+    return res.status(429).json({ message: "Too many upload requests, slow down." });
+  }
+  entry.count += 1;
+  next();
+};
+
+/**
+ * Resolve which location version to show. An explicit, valid ?locationType=
+ * query param wins; otherwise fall back to the shared user's saved preference;
+ * otherwise default to portland.
+ */
+async function resolveLocationType(rawQuery: unknown): Promise<LocationType> {
+  if (typeof rawQuery === "string" && (VALID_LOCATIONS as readonly string[]).includes(rawQuery)) {
+    return rawQuery as LocationType;
+  }
+  const user = await storage.getUser(SHARED_USER_ID);
+  const pref = user?.locationPreference;
+  if (pref && (VALID_LOCATIONS as readonly string[]).includes(pref)) {
+    return pref as LocationType;
+  }
+  return "portland";
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes - return the single shared user
@@ -45,23 +107,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/user/settings', async (req: any, res) => {
     try {
       const userId = SHARED_USER_ID;
-      console.log('Updating settings for user:', userId);
-      console.log('Request body:', req.body);
-      
       const validated = updateUserSettingsSchema.parse(req.body);
-      console.log('Validated data:', validated);
-      
-      const settings: any = {};
+
+      const settings: { startDate?: Date; locationPreference?: string } = {};
       if (validated.startDate) {
         settings.startDate = new Date(validated.startDate);
       }
       if (validated.locationPreference) {
         settings.locationPreference = validated.locationPreference;
       }
-      
-      console.log('Settings to update:', settings);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Updating settings for user:', userId, settings);
+      }
       const user = await storage.updateUserSettings(userId, settings);
-      console.log('Updated user:', user);
       res.json(user);
     } catch (error) {
       console.error("Error updating user settings:", error);
@@ -82,14 +141,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/pauses/:id', async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid pause id" });
+      }
       const pause = await storage.getPause(id);
       if (!pause) {
         return res.status(404).json({ message: "Pause not found" });
       }
 
+      const locationType = await resolveLocationType(req.query.locationType);
       const activities = await storage.getActivitiesByPause(id);
-      const locations = await storage.getLocationsByPause(id);
+      const locations = await storage.getLocationsByPause(id, locationType);
       const photographers = await storage.getPhotographersByPause(id);
 
       res.json({ ...pause, activities, locations, photographers });
@@ -102,12 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Activities routes
   app.get('/api/activities', async (req, res) => {
     try {
-      const pauses = await storage.getAllPauses();
-      const allActivities = [];
-      for (const pause of pauses) {
-        const activities = await storage.getActivitiesByPause(pause.id);
-        allActivities.push(...activities);
-      }
+      const allActivities = await storage.getAllActivities();
       res.json(allActivities);
     } catch (error) {
       console.error("Error fetching all activities:", error);
@@ -117,7 +175,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/pauses/:pauseId/activities', async (req, res) => {
     try {
-      const pauseId = parseInt(req.params.pauseId);
+      const pauseId = parseId(req.params.pauseId);
+      if (pauseId === null) {
+        return res.status(400).json({ message: "Invalid pause id" });
+      }
       const activities = await storage.getActivitiesByPause(pauseId);
       res.json(activities);
     } catch (error) {
@@ -129,8 +190,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Locations routes
   app.get('/api/pauses/:pauseId/locations', async (req, res) => {
     try {
-      const pauseId = parseInt(req.params.pauseId);
-      const locations = await storage.getLocationsByPause(pauseId);
+      const pauseId = parseId(req.params.pauseId);
+      if (pauseId === null) {
+        return res.status(400).json({ message: "Invalid pause id" });
+      }
+      const locationType = await resolveLocationType(req.query.locationType);
+      const locations = await storage.getLocationsByPause(pauseId, locationType);
       res.json(locations);
     } catch (error) {
       console.error("Error fetching locations:", error);
@@ -141,7 +206,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Photographers routes
   app.get('/api/pauses/:pauseId/photographers', async (req, res) => {
     try {
-      const pauseId = parseInt(req.params.pauseId);
+      const pauseId = parseId(req.params.pauseId);
+      if (pauseId === null) {
+        return res.status(400).json({ message: "Invalid pause id" });
+      }
       const photographers = await storage.getPhotographersByPause(pauseId);
       res.json(photographers);
     } catch (error) {
@@ -183,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/journal', async (req: any, res) => {
     try {
       const userId = SHARED_USER_ID;
-      const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
+      const pauseId = parsePauseIdQuery(req.query.pauseId);
       const entries = await storage.getUserJournalEntries(userId, pauseId);
       res.json(entries);
     } catch (error) {
@@ -210,9 +278,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/journal/:id', async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid journal entry id" });
+      }
       const { content } = req.body;
-      
+
       if (!content) {
         return res.status(400).json({ message: "Content is required" });
       }
@@ -229,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/photos', async (req: any, res) => {
     try {
       const userId = SHARED_USER_ID;
-      const pauseId = req.query.pauseId ? parseInt(req.query.pauseId as string) : undefined;
+      const pauseId = parsePauseIdQuery(req.query.pauseId);
       const photos = await storage.getUserPhotos(userId, pauseId);
       res.json(photos);
     } catch (error) {
@@ -245,10 +316,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId,
       });
-      
+
+      if (typeof validated.caption === "string" && validated.caption.length > 2000) {
+        return res.status(400).json({ message: "Caption too long (max 2000 chars)" });
+      }
+
       const objectStorageService = new ObjectStorageService();
       const normalizedPath = objectStorageService.normalizeObjectEntityPath(validated.objectPath);
-      
+
+      // Validate the actually-uploaded object: must exist, be an allowed image
+      // type, and be within the size limit. This is the real enforcement point
+      // since the browser uploads directly to storage via a presigned URL.
+      try {
+        const meta = await objectStorageService.getObjectMetadata(normalizedPath);
+        if (!ALLOWED_IMAGE_TYPES.includes(meta.contentType)) {
+          return res.status(400).json({
+            message: `Unsupported file type: ${meta.contentType}. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
+          });
+        }
+        if (meta.size > MAX_IMAGE_BYTES) {
+          return res.status(400).json({
+            message: `File too large (${meta.size} bytes). Max ${MAX_IMAGE_BYTES} bytes.`,
+          });
+        }
+      } catch (err) {
+        if (err instanceof ObjectNotFoundError) {
+          return res.status(400).json({ message: "Uploaded object not found" });
+        }
+        throw err;
+      }
+
       const photo = await storage.createPhoto({
         ...validated,
         objectPath: normalizedPath,
@@ -263,8 +360,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/photos/:id', async (req: any, res) => {
     try {
       const userId = SHARED_USER_ID;
-      const id = parseInt(req.params.id);
-      
+      const id = parseId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid photo id" });
+      }
+
       const photos = await storage.getUserPhotos(userId);
       const photo = photos.find(p => p.id === id);
       
@@ -289,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object storage routes
-  app.post("/api/objects/upload", async (req, res) => {
+  app.post("/api/objects/upload", uploadRateLimiter, async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();

@@ -115,15 +115,15 @@ export class ObjectStorageService {
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
-  
+
     const url = new URL(rawPath);
     const rawObjectPath = url.pathname;
-  
+
     let objectEntityDir = this.getPrivateObjectDir();
     if (!objectEntityDir.endsWith("/")) {
       objectEntityDir = `${objectEntityDir}/`;
     }
-  
+
     if (!rawObjectPath.startsWith(objectEntityDir)) {
       return rawObjectPath;
     }
@@ -131,7 +131,33 @@ export class ObjectStorageService {
     const entityId = rawObjectPath.slice(objectEntityDir.length);
     return `/objects/${entityId}`;
   }
+
+  /**
+   * Fetch metadata (content-type, size) for a stored object referenced by an
+   * /objects/... path. Throws ObjectNotFoundError if it doesn't exist.
+   */
+  async getObjectMetadata(
+    objectPath: string
+  ): Promise<{ contentType: string; size: number }> {
+    const file = await this.getObjectEntityFile(objectPath);
+    const [metadata] = await file.getMetadata();
+    return {
+      contentType: metadata.contentType || "application/octet-stream",
+      size: Number(metadata.size ?? 0),
+    };
+  }
 }
+
+// Upload constraints for user photos.
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
+export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 
 function parseObjectPath(path: string): {
   bucketName: string;

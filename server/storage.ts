@@ -34,6 +34,7 @@ export interface IStorage {
   
   // Activity operations
   getActivitiesByPause(pauseId: number): Promise<Activity[]>;
+  getAllActivities(): Promise<Activity[]>;
   
   // User progress operations
   getUserProgress(userId: string): Promise<UserProgress[]>;
@@ -110,6 +111,13 @@ export class DatabaseStorage implements IStorage {
       .from(activities)
       .where(eq(activities.pauseId, pauseId))
       .orderBy(activities.orderIndex);
+  }
+
+  async getAllActivities(): Promise<Activity[]> {
+    return await db
+      .select()
+      .from(activities)
+      .orderBy(activities.pauseId, activities.orderIndex);
   }
 
   // User progress operations
