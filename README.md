@@ -18,6 +18,7 @@ An experiential program integrating mindfulness practices with photography exerc
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
 - **Backend**: Express.js, Node.js
 - **Database**: PostgreSQL (Neon) with Drizzle ORM
+- **Object Storage**: Pluggable — local filesystem (dev) or any S3-compatible bucket such as Cloudflare R2 / AWS S3 (prod)
 - **UI Components**: Radix UI, shadcn/ui
 - **Deployment**: Render.com (free tier)
 
@@ -46,9 +47,10 @@ npm install
 Create a `.env.local` file in the root directory:
 ```env
 DATABASE_URL=your_postgresql_connection_string
-SESSION_SECRET=your_session_secret_key
 PORT=3000
 NODE_ENV=development
+# Photo storage: defaults to the local filesystem in dev (no config needed).
+# To use an S3-compatible bucket locally, see "Photo Storage" below.
 ```
 
 4. Push database schema:
@@ -135,9 +137,19 @@ In Render Dashboard → Your Service → Environment:
 | Variable | Value | Notes |
 |----------|-------|-------|
 | `DATABASE_URL` | Your Neon connection string | From Neon dashboard |
-| `SESSION_SECRET` | Random string | Generate: `openssl rand -base64 32` |
 | `NODE_ENV` | `production` | Enables production optimizations |
 | `PORT` | `3000` | Server port (optional, Render sets this) |
+| `STORAGE_DRIVER` | `s3` | Use an S3-compatible bucket in prod (see below) |
+| `S3_BUCKET` | Your bucket name | e.g. `mindfulframes` |
+| `S3_ENDPOINT` | Bucket endpoint | R2: `https://<account-id>.r2.cloudflarestorage.com` |
+| `S3_ACCESS_KEY_ID` | Access key | From R2/S3 credentials |
+| `S3_SECRET_ACCESS_KEY` | Secret key | From R2/S3 credentials |
+| `S3_REGION` | `auto` | `auto` for R2; the AWS region for S3 |
+
+> **Why S3 and not local disk?** Render's free tier has an **ephemeral** filesystem —
+> uploaded photos would be wiped on every redeploy/restart. An S3-compatible
+> bucket keeps them durable. Cloudflare R2 is recommended: 10 GB storage free
+> with **zero egress fees**.
 
 #### Step 4: Deploy
 
@@ -204,10 +216,33 @@ While this app is optimized for Render, you can also deploy to:
 
 ## Development Notes
 
+### Photo Storage
+
+Photo storage is **pluggable** via a small driver interface (`server/storageProvider.ts`),
+so the app is not tied to any one host. The driver is chosen by env:
+
+- **`local`** (default in dev): writes files under `.data/uploads/`. Zero config.
+- **`s3`**: any S3-compatible bucket (Cloudflare R2, AWS S3, Backblaze B2, MinIO).
+
+Uploads are streamed **through the app server** (the browser PUTs to our own
+origin), so **no bucket CORS configuration is required**.
+
+#### Setting up Cloudflare R2 (recommended for Render)
+
+1. In the Cloudflare dashboard, go to **R2** → **Create bucket** (e.g. `mindfulframes`).
+2. **R2** → **Manage R2 API Tokens** → **Create API Token** (Object Read & Write).
+   Copy the **Access Key ID**, **Secret Access Key**, and your **endpoint**
+   (`https://<account-id>.r2.cloudflarestorage.com`).
+3. On Render, set the env vars from the table above
+   (`STORAGE_DRIVER=s3`, `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`,
+   `S3_SECRET_ACCESS_KEY`, `S3_REGION=auto`).
+4. Redeploy. Photos now persist across restarts.
+
+To test the `s3` driver locally, set the same vars in `.env.local`.
+
 ### Authentication
-- App uses a single shared user (`main-user`) for simplicity
-- No authentication required - suitable for personal use
-- All users share the same data and settings
+- App uses a single shared user (`main-user`) — no login required (personal use).
+- All sessions share the same data and settings.
 
 ### Database Schema
 - **users**: User profile and preferences
@@ -221,19 +256,17 @@ While this app is optimized for Render, you can also deploy to:
 
 ### Known Issues & Fixes
 
-During development, several caching issues were resolved:
+This project was originally scaffolded on Replit. It has since been **decoupled
+from Replit-specific infrastructure** so it runs on any host:
 
-1. **Settings Not Persisting**: Fixed by:
-   - Disabling HTTP caching on `/api/auth/user` endpoint (server-side)
-   - Setting React Query `staleTime: 0` (client-side)
-   - Adding `cache: "no-store"` to fetch requests
-   - Using user data directly instead of local component state
-
-2. **Session Management**: Switched from session-based unique users to single shared user for better persistence across browser sessions.
-
-3. **Build Dependencies**: Moved Vite, esbuild, and TailwindCSS plugins from devDependencies to dependencies for Render deployment compatibility.
-
-4. **Port Configuration**: Changed from port 5000 to 3000 to avoid macOS AirPlay conflicts. Removed `reusePort` option for better macOS compatibility.
+1. **Object storage** no longer depends on the Replit storage sidecar; it uses
+   a pluggable local/S3 driver (see "Photo Storage").
+2. **Authentication** scaffolding (Replit OIDC/Passport/sessions) was removed in
+   favor of the single shared user, so no `SESSION_SECRET` is needed.
+3. **Deployment** is standardized on Render (`render.yaml`); the unused
+   Vercel/Replit configs were removed.
+4. **Caching**: `/api/auth/user` sends `no-store` and React Query uses
+   `staleTime: 0` so settings changes are reflected immediately.
 
 ### Architecture
 - **Frontend**: React SPA with Vite dev server (HMR enabled)

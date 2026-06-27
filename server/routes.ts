@@ -1,4 +1,5 @@
 import type { Express, RequestHandler } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "./objectStorage";
@@ -374,8 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const objectStorageService = new ObjectStorageService();
-        const objectFile = await objectStorageService.getObjectEntityFile(photo.objectPath);
-        await objectFile.delete();
+        await objectStorageService.deleteObject(photo.objectPath);
       } catch (error) {
         console.error("Error deleting object from storage:", error);
       }
@@ -400,16 +400,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Receive the actual file bytes (browser PUTs here directly — same origin, so
+  // no third-party CORS config is required). Streamed to the configured driver.
+  app.put(
+    "/api/objects/upload/:objectId",
+    uploadRateLimiter,
+    express.raw({ type: () => true, limit: MAX_IMAGE_BYTES }),
+    async (req, res) => {
+      try {
+        const { objectId } = req.params;
+        if (!/^[A-Za-z0-9_-]+$/.test(objectId)) {
+          return res.status(400).json({ message: "Invalid object id" });
+        }
+
+        const contentType = String(req.headers["content-type"] || "")
+          .split(";")[0]
+          .trim();
+        if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+          return res.status(400).json({
+            message: `Unsupported file type: ${contentType || "unknown"}. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
+          });
+        }
+
+        const body = req.body;
+        if (!Buffer.isBuffer(body) || body.length === 0) {
+          return res.status(400).json({ message: "Empty upload" });
+        }
+        if (body.length > MAX_IMAGE_BYTES) {
+          return res.status(400).json({ message: "File too large" });
+        }
+
+        const objectStorageService = new ObjectStorageService();
+        const objectPath = await objectStorageService.putUpload(
+          objectId,
+          body,
+          contentType,
+        );
+        res.status(200).json({ ok: true, objectPath });
+      } catch (error) {
+        console.error("Error storing upload:", error);
+        res.status(500).json({ message: "Failed to store upload" });
+      }
+    },
+  );
+
   app.get("/objects/:objectPath(*)", async (req, res) => {
-    const objectStorageService = new ObjectStorageService();
     try {
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
-      objectStorageService.downloadObject(objectFile, res);
+      const objectStorageService = new ObjectStorageService();
+      await objectStorageService.downloadObject(req.path, res);
     } catch (error) {
-      console.error("Error fetching object:", error);
       if (error instanceof ObjectNotFoundError) {
         return res.sendStatus(404);
       }
+      console.error("Error fetching object:", error);
       return res.sendStatus(500);
     }
   });

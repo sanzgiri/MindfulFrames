@@ -38,6 +38,9 @@ lerna-debug.log*
 server/public
 vite.config.ts.*
 
+# Local object storage (dev photo uploads)
+.data/
+
 # Deployment platform dirs
 .vercel
 

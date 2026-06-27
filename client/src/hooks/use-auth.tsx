@@ -2,7 +2,6 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface AuthContextType {
   user: User | null | undefined;
@@ -18,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading, isError, error } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
   });
@@ -49,9 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
   };
 
-  // Check if the error is a 401 Unauthorized
-  const is401Error = isError && error && isUnauthorizedError(error as Error);
-  // Always treat as authenticated since we're using a demo user
+  // This app is intentionally single-user (no auth). The "user" is a single
+  // shared record on the server; the client always treats itself as signed in.
   const isAuthenticated = true;
 
   const value: AuthContextType = {

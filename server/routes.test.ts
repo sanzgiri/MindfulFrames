@@ -42,8 +42,13 @@ vi.mock("./objectStorage", () => {
         return { contentType: "image/jpeg", size: 100 };
       }
       async getObjectEntityUploadURL() {
-        return "https://example.com/upload";
+        return "/api/objects/upload/test-id";
       }
+      async putUpload() {
+        return "/objects/uploads/test-id";
+      }
+      async deleteObject() {}
+      async downloadObject() {}
     },
   };
 });

@@ -38,7 +38,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database Layer**: Drizzle ORM with Neon serverless PostgreSQL connection pooling. The storage abstraction pattern (IStorage interface) provides a clean separation between business logic and data access.
 
-**File Storage**: Google Cloud Storage integration for photo uploads via Replit Object Storage sidecar service. External account credentials authenticate directly with GCS without requiring service account JSON files.
+**File Storage**: Pluggable object storage (`server/storageProvider.ts`) with a local-filesystem driver for development and an S3-compatible driver (Cloudflare R2 / AWS S3 / Backblaze B2 / MinIO) for production. Uploads stream through the app server, so no bucket CORS config is required. *(Originally the Replit Object Storage sidecar — now removed.)*
 
 **Request Lifecycle**:
 1. Session middleware validates authentication
@@ -59,7 +59,7 @@ Preferred communication style: Simple, everyday language.
 
 **Session Storage**: PostgreSQL table managed by connect-pg-simple for production-ready session persistence.
 
-**Object Storage**: Google Cloud Storage for photo uploads, accessed through Replit's Object Storage abstraction with automatic credential injection.
+**Object Storage**: Local filesystem (dev) or any S3-compatible bucket (prod), selected via the `STORAGE_DRIVER` env var.
 
 **Migrations**: Drizzle Kit manages schema migrations with files stored in `/migrations` directory.
 
@@ -98,7 +98,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database**: Neon serverless PostgreSQL for relational data storage with WebSocket connection support.
 
-**Object Storage**: Google Cloud Storage via Replit Object Storage sidecar (local endpoint at http://127.0.0.1:1106) for photo uploads and serving.
+**Object Storage**: Local filesystem (dev) or an S3-compatible bucket such as Cloudflare R2 (prod). Configured via `STORAGE_DRIVER` / `S3_*` env vars.
 
 **Music Integration**: Spotify playlist embedding through external links (no API integration).
 
