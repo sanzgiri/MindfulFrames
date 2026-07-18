@@ -1,6 +1,11 @@
 # MindfulFrames
 
-A 10-week mindfulness and photography journey combining meditation practices with creative photography exercises. Built as a full-stack web application with React, TypeScript, Express, and PostgreSQL.
+A 10-week mindfulness and photography journey combining meditation practices with creative photography exercises. This repository contains separate web and native iOS applications.
+
+## Applications
+
+- **Web app:** React, TypeScript, Express, and PostgreSQL code in the existing root directories.
+- **iOS app:** Native SwiftUI project in [`MindfulFrames-iOS/`](MindfulFrames-iOS/README.md).
 
 ## Overview
 

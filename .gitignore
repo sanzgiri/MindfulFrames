@@ -34,6 +34,13 @@ lerna-debug.log*
 *.sln
 *.sw?
 
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.ipa
+*.xcarchive
+
 # Vite
 server/public
 vite.config.ts.*
